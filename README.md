@@ -77,3 +77,8 @@ Recommended writable states:
 - `devices.<gateway>.controls.mode`
 - `devices.<gateway>.controls.dhw_set_temperature`
 - `devices.<gateway>.controls.power`
+
+
+## Icon
+
+This build ships the adapter icon in both the package root and `admin/ariston.png`, and also sets `extIcon` for improved display in ioBroker Admin.
