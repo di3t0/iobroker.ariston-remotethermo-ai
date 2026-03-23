@@ -214,7 +214,7 @@ def guess_operation_modes(device):
         return []
     if 'velis' in name:
         return enum_names(VelisPlantMode)
-    if 'lydos' in name and 'hybrid' not in name:
+    if 'lydos' in name:
         return enum_names(LydosPlantMode)
     if 'nuossplit' in name or 'nuossplit' in name:
         return enum_names(NuosSplitOperativeMode)
@@ -260,14 +260,58 @@ def map_water_heater_mode(device, raw_value: Any):
 def enrich_values(device, values: dict[str, Any], units: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
     out = dict(values)
     unit_map = dict(units)
-    mode_name = map_water_heater_mode(device, values.get('water_heater_mode'))
+    raw_data = to_primitive(getattr(device, 'data', None))
+    if not isinstance(raw_data, dict):
+        raw_data = {}
+
+    mode_raw = values.get('water_heater_mode')
+    if mode_raw is None:
+        mode_raw = raw_data.get('mode')
+        if mode_raw is not None:
+            out['water_heater_mode'] = mode_raw
+
+    mode_name = map_water_heater_mode(device, mode_raw)
     if mode_name is not None:
         out['water_heater_mode_name'] = mode_name
-    if values.get('proc_req_temp') is not None:
-        out['target_water_heater_temperature'] = values.get('proc_req_temp')
+
+    current_temp = values.get('water_heater_temperature')
+    if current_temp is None:
+        current_temp = raw_data.get('temp')
+    if current_temp is not None:
+        out['current_water_heater_temperature'] = current_temp
+        unit_map['current_water_heater_temperature'] = units.get('water_heater_temperature') or '°C'
+
+    target_temp = values.get('target_water_heater_temperature')
+    if target_temp is None:
+        target_temp = raw_data.get('reqTemp')
+    if target_temp is None:
+        target_temp = values.get('water_heater_temperature')
+    if target_temp is None:
+        target_temp = values.get('proc_req_temp')
+    if target_temp is not None:
+        out['target_water_heater_temperature'] = target_temp
         unit_map['target_water_heater_temperature'] = units.get('water_heater_temperature') or '°C'
+
+    boost_temp = raw_data.get('boostReqTemp')
+    if boost_temp is not None:
+        out['boost_water_heater_temperature'] = boost_temp
+        unit_map['boost_water_heater_temperature'] = units.get('water_heater_temperature') or '°C'
+
+    if raw_data.get('procReqTemp') is not None and out.get('proc_req_temp') is None:
+        out['proc_req_temp'] = raw_data.get('procReqTemp')
+        unit_map['proc_req_temp'] = units.get('water_heater_temperature') or '°C'
+
+    if values.get('water_heater_power') is None and raw_data.get('on') is not None:
+        out['water_heater_power'] = bool(raw_data.get('on'))
+
+    if values.get('is_heating') is None and raw_data.get('heatReq') is not None:
+        out['is_heating'] = bool(raw_data.get('heatReq'))
+
     if values.get('av_shw') is not None:
         out['available_showers_estimate'] = values.get('av_shw')
+    elif raw_data.get('avShw') is not None:
+        out['available_showers_estimate'] = raw_data.get('avShw')
+
     if values.get('night_mode_begin_as_minutes') is not None:
         out['night_mode_begin_hhmm'] = minutes_to_hhmm(values.get('night_mode_begin_as_minutes'))
     if values.get('night_mode_end_as_minutes') is not None:
@@ -305,6 +349,18 @@ def build_controls(device, methods: list[str], values: dict[str, Any], units: di
         add_control(controls, 'power', type='boolean', role='switch.enable', method='async_set_power', current=current)
 
     if 'async_set_water_heater_operation_mode' in methods:
+        mode_map = {}
+        for name in operation_modes:
+            mapped = None
+            try:
+                enum_cls = device.water_heater_mode
+                member = getattr(enum_cls, name, None)
+                if member is not None:
+                    mapped = int(member.value)
+            except Exception:
+                mapped = None
+            if mapped is not None:
+                mode_map[str(mapped)] = name
         add_control(
             controls,
             'mode',
@@ -313,6 +369,7 @@ def build_controls(device, methods: list[str], values: dict[str, Any], units: di
             method='async_set_water_heater_operation_mode',
             states=operation_modes,
             current=map_water_heater_mode(device, values.get('water_heater_mode')),
+            mode_map=mode_map,
         )
 
     if 'async_set_water_heater_temperature' in methods:
@@ -325,7 +382,7 @@ def build_controls(device, methods: list[str], values: dict[str, Any], units: di
             unit=units.get('water_heater_temperature') or '°C',
             min=30,
             max=80,
-            current=values.get('target_water_heater_temperature') or values.get('water_heater_temperature') or values.get('proc_req_temp'),
+            current=values.get('target_water_heater_temperature') or values.get('water_heater_temperature') or values.get('req_temp') or values.get('proc_req_temp'),
         )
 
     if 'async_set_water_heater_reduced_temperature' in methods:
@@ -588,6 +645,14 @@ def parse_control_value(control: dict[str, Any], raw_value: Any):
     if ctype == 'number':
         num = float(raw_value)
         return int(num) if num.is_integer() else num
+    if cid == 'mode':
+        sval = str(raw_value).strip()
+        mode_map = control.get('mode_map') or {}
+        if sval in mode_map:
+            return mode_map[sval]
+        if sval.isdigit() and str(int(sval)) in mode_map:
+            return mode_map[str(int(sval))]
+        return sval.upper()
     return str(raw_value)
 
 

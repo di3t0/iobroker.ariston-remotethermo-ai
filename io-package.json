@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "ariston-remotethermo-ai",
-    "version": "1.1.3",
+    "version": "1.1.4",
     "news": {
       "1.0.0": {
         "en": "Production-oriented release with multi-device sync, richer controls, better error handling and bundled Python bootstrap",
@@ -43,19 +43,7 @@
       "uk": "Ariston RemoteThermo",
       "zh-cn": "Ariston RemoteThermo"
     },
-    "desc": {
-      "en": "ioBroker adapter for Ariston RemoteThermo devices with improved icon handling, bundled Python bridge and tuned Lydos Hybrid mapping",
-      "de": "ioBroker adapter for Ariston RemoteThermo devices with improved icon handling, bundled Python bridge and tuned Lydos Hybrid mapping",
-      "ru": "ioBroker adapter for Ariston RemoteThermo devices with improved icon handling, bundled Python bridge and tuned Lydos Hybrid mapping",
-      "pt": "ioBroker adapter for Ariston RemoteThermo devices with improved icon handling, bundled Python bridge and tuned Lydos Hybrid mapping",
-      "nl": "ioBroker adapter for Ariston RemoteThermo devices with improved icon handling, bundled Python bridge and tuned Lydos Hybrid mapping",
-      "fr": "ioBroker adapter for Ariston RemoteThermo devices with improved icon handling, bundled Python bridge and tuned Lydos Hybrid mapping",
-      "it": "ioBroker adapter for Ariston RemoteThermo devices with improved icon handling, bundled Python bridge and tuned Lydos Hybrid mapping",
-      "es": "ioBroker adapter for Ariston RemoteThermo devices with improved icon handling, bundled Python bridge and tuned Lydos Hybrid mapping",
-      "pl": "ioBroker adapter for Ariston RemoteThermo devices with improved icon handling, bundled Python bridge and tuned Lydos Hybrid mapping",
-      "uk": "ioBroker adapter for Ariston RemoteThermo devices with improved icon handling, bundled Python bridge and tuned Lydos Hybrid mapping",
-      "zh-cn": "ioBroker adapter for Ariston RemoteThermo devices with improved icon handling, bundled Python bridge and tuned Lydos Hybrid mapping"
-    },
+    "desc": "ioBroker adapter for Ariston RemoteThermo devices with bundled Python bridge and improved Lydos Hybrid state mapping",
     "authors": [
       "OpenAI"
     ],
@@ -63,7 +51,7 @@
     "platform": "Javascript/Node.js",
     "main": "main.js",
     "icon": "ariston.png",
-    "extIcon": "https://raw.githubusercontent.com/di3t0/iobroker.ariston-remotethermo-ai/main/admin/ariston.png",
+    "extIcon": "",
     "enabled": true,
     "loglevel": "info",
     "mode": "daemon",
@@ -153,5 +141,5 @@
     }
   ],
   "instanceObjects": [],
-  "version": "1.1.3"
+  "version": "1.1.4"
 }

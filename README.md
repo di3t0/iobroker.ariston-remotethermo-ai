@@ -79,6 +79,13 @@ Recommended writable states:
 - `devices.<gateway>.controls.power`
 
 
-## Icon
+## Automation notes
 
-This build ships the adapter icon in both the package root and `admin/ariston.png`, and also sets `extIcon` for improved display in ioBroker Admin.
+Recommended states for automations on Lydos Hybrid:
+
+- Read current water temperature from `devices.<gateway>.values.current_water_heater_temperature`
+- Read current mode from `devices.<gateway>.values.water_heater_mode_name`
+- Write mode to `devices.<gateway>.controls.mode` using `IMEMORY`, `GREEN`, `PROGRAM`, or `BOOST`
+- Write setpoint to `devices.<gateway>.controls.dhw_set_temperature`
+
+`values.water_heater_mode` is a raw read-only numeric code and is not intended for direct writes.
