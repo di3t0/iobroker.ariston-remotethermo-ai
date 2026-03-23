@@ -42,3 +42,15 @@ iobroker url https://github.com/di3t0/iobroker.ariston-remotethermo-ai.git --hos
 ## Notes
 
 Bundled Python dependencies improve deployment convenience, but some binary wheels may still depend on the host platform and Python version.
+
+
+## Python compatibility notes
+
+This build is designed to be more tolerant on typical ioBroker Linux hosts:
+
+- works with system `python3`
+- bootstraps `pip` via `ensurepip` when `python3-pip` is missing
+- tries bundled wheels first when compatible
+- falls back to online install when needed
+
+Recommended setting for most systems: `installStrategy=auto`.

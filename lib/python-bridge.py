@@ -5,6 +5,7 @@ import inspect
 import json
 import subprocess
 import sys
+import traceback
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Iterable
@@ -14,7 +15,26 @@ WHEEL_DIR = BASE_DIR / 'python-wheels'
 LOCAL_DEPS_DIR = BASE_DIR / '.pydeps'
 
 
+def _ensure_pip_module() -> None:
+    try:
+        import pip  # noqa:F401
+        return
+    except Exception:
+        pass
+
+    try:
+        import ensurepip
+        ensurepip.bootstrap(upgrade=True)
+        return
+    except Exception as exc:
+        raise RuntimeError(
+            'Python module pip is not available and automatic bootstrap via ensurepip failed. '
+            f'Install python3-pip on the host or switch installStrategy=system. Details: {exc}'
+        )
+
+
 def _pip_install(target: Path, packages: list[str], offline: bool) -> tuple[int, str]:
+    _ensure_pip_module()
     cmd = [
         sys.executable,
         '-m',
@@ -50,7 +70,7 @@ def bootstrap_local_deps(strategy: str) -> None:
         raise RuntimeError('python-wheels directory not found and ariston is not installed')
 
     LOCAL_DEPS_DIR.mkdir(parents=True, exist_ok=True)
-    package_spec = ['ariston==0.19.9']
+    package_spec = ['ariston==0.19.9', 'requests>=2.31.0']
 
     offline_err = ''
     online_err = ''
@@ -480,9 +500,8 @@ async def main_async():
     parser.add_argument('--install-strategy', default='auto', choices=['auto', 'offline', 'online', 'system'])
     args = parser.parse_args()
 
-    bootstrap_local_deps(args.install_strategy)
-
     try:
+        bootstrap_local_deps(args.install_strategy)
         if args.command == 'discover':
             await cmd_discover(args)
         elif args.command == 'state':
@@ -492,7 +511,7 @@ async def main_async():
         elif args.command == 'control':
             await cmd_control(args)
     except Exception as exc:
-        print(json.dumps({'ok': False, 'error': str(exc)}, ensure_ascii=False))
+        print(json.dumps({'ok': False, 'error': str(exc), 'traceback': traceback.format_exc()}, ensure_ascii=False))
         return 1
     return 0
 

@@ -42,6 +42,26 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
             common: { name: 'Invoke device method via JSON payload', type: 'string', role: 'json', read: true, write: true, def: '' },
             native: {},
         });
+        await this.setObjectNotExistsAsync('info.connection', {
+            type: 'state',
+            common: { name: 'Connected to device or service', type: 'boolean', role: 'indicator.connected', read: true, write: false, def: false },
+            native: {},
+        });
+        await this.setObjectNotExistsAsync('info.lastError', {
+            type: 'state',
+            common: { name: 'Last adapter error', type: 'string', role: 'text', read: true, write: false, def: '' },
+            native: {},
+        });
+        await this.setObjectNotExistsAsync('info.lastSync', {
+            type: 'state',
+            common: { name: 'Last successful sync time', type: 'string', role: 'date', read: true, write: false, def: '' },
+            native: {},
+        });
+        await this.setObjectNotExistsAsync('info.deviceCount', {
+            type: 'state',
+            common: { name: 'Discovered device count', type: 'number', role: 'value', read: true, write: false, def: 0 },
+            native: {},
+        });
         await this.setObjectNotExistsAsync('info.availableMethods', {
             type: 'state',
             common: { name: 'All write methods from Python bridge', type: 'string', role: 'json', read: true, write: false, def: '[]' },
@@ -254,24 +274,28 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
     runBridge(command, gatewayId = '', extraArgs = []) {
         return new Promise((resolve, reject) => {
             const args = this.bridgeArgs(command, gatewayId).concat(extraArgs);
-            const proc = spawn(this.config.pythonBin || 'python3', args, { cwd: __dirname });
+            const proc = spawn(this.config.pythonBin || 'python3', args, { cwd: __dirname, env: { ...process.env, PYTHONUNBUFFERED: '1' } });
             let stdout = '';
             let stderr = '';
             proc.stdout.on('data', chunk => (stdout += chunk.toString()));
             proc.stderr.on('data', chunk => (stderr += chunk.toString()));
             proc.on('error', reject);
             proc.on('close', code => {
-                if (stderr.trim()) this.log.debug(`python stderr: ${stderr.trim()}`);
+                if (stderr.trim()) this.log.warn(`python stderr: ${stderr.trim()}`);
+                const rawStdout = stdout.trim();
                 let parsed = null;
-                try {
-                    parsed = JSON.parse(stdout.trim() || '{}');
-                } catch (err) {
-                    return reject(new Error(`Invalid JSON from python bridge (exit ${code}): ${stdout || stderr}`));
+                if (rawStdout) {
+                    try {
+                        parsed = JSON.parse(rawStdout);
+                    } catch (err) {
+                        return reject(new Error(`Invalid JSON from python bridge (exit ${code}): ${rawStdout || stderr}`));
+                    }
                 }
-                if (code !== 0 && parsed.ok !== false) {
-                    return reject(new Error(`Python bridge exited with ${code}`));
+                if (code !== 0) {
+                    const detail = parsed?.error || stderr.trim() || rawStdout || `Python bridge exited with ${code}`;
+                    return reject(new Error(detail));
                 }
-                resolve(parsed);
+                resolve(parsed || { ok: true });
             });
         });
     }
