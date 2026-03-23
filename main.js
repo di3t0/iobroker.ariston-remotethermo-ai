@@ -11,15 +11,33 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
         this.syncInProgress = false;
         this.pendingRefresh = false;
         this.pollCounter = 0;
+        this.correctedApiUrl = null;
         this.on('ready', this.onReady.bind(this));
         this.on('stateChange', this.onStateChange.bind(this));
         this.on('unload', this.onUnload.bind(this));
+    }
+
+
+    normalizeApiUrl(rawUrl) {
+        const fallback = 'https://www.ariston-net.remotethermo.com/api/v2/';
+        const input = String(rawUrl || '').trim();
+        if (!input) return fallback;
+        const normalized = input.replace(/\/+$/, '/');
+        if (/\/R2\/Account\/?$/i.test(normalized) || /\/Account\/?$/i.test(normalized)) {
+            return fallback;
+        }
+        return normalized;
     }
 
     async onReady() {
         await this.ensureBaseObjects();
         await this.setStateAsync('info.connection', false, true);
         await this.setStateAsync('info.lastError', '', true);
+
+        this.correctedApiUrl = this.normalizeApiUrl(this.config.apiUrl);
+        if (String(this.config.apiUrl || '').trim() !== this.correctedApiUrl) {
+            this.log.warn(`Normalized API URL from "${this.config.apiUrl || ''}" to "${this.correctedApiUrl}"`);
+        }
 
         if (!this.config.username || !this.config.password) {
             const msg = 'Missing username or password in adapter config';
@@ -261,7 +279,7 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
             command,
             '--username', String(this.config.username),
             '--password', String(this.config.password),
-            '--api-url', String(this.config.apiUrl || ''),
+            '--api-url', String(this.correctedApiUrl || this.normalizeApiUrl(this.config.apiUrl)),
             '--user-agent', String(this.config.userAgent || ''),
             '--install-strategy', String(this.config.installStrategy || 'auto'),
         ];
@@ -372,7 +390,7 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
 }
 
 if (require.main !== module) {
-    module.exports = options => new AristonCloudAdapter(options);
+    module.exports = options => new AristonRemoteThermoAiAdapter(options);
 } else {
     new AristonRemoteThermoAiAdapter();
 }

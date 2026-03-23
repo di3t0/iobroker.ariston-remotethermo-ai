@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "ariston-remotethermo-ai",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "news": {
       "1.0.0": {
         "en": "Production-oriented release with multi-device sync, richer controls, better error handling and bundled Python bootstrap",
@@ -15,6 +15,19 @@
         "pl": "Wersja produkcyjna z synchronizacją wielu urządzeń, bogatszym sterowaniem, lepszą obsługą błędów i dołączonym bootstrapem Pythona",
         "uk": "Версія для production із синхронізацією кількох пристроїв, розширеним керуванням, кращою обробкою помилок і вбудованим Python bootstrap",
         "zh-cn": "面向生产的版本，支持多设备同步、更丰富的控制、更好的错误处理以及内置 Python 引导"
+      },
+      "1.0.1": {
+        "en": "Fixes wrong default API URL, improves auth diagnostics and enables the adapter by default",
+        "de": "Behebt die falsche Standard-API-URL, verbessert die Auth-Diagnose und aktiviert den Adapter standardmäßig",
+        "ru": "Исправляет неверный URL API по умолчанию, улучшает диагностику аутентификации и включает адаптер по умолчанию",
+        "pt": "Corrige a URL de API padrão incorreta, melhora o diagnóstico de autenticação e ativa o adaptador por padrão",
+        "nl": "Herstelt de verkeerde standaard-API-URL, verbetert auth-diagnose en schakelt de adapter standaard in",
+        "fr": "Corrige l'URL API par défaut, améliore le diagnostic d'authentification et active l'adaptateur par défaut",
+        "it": "Corregge l'URL API predefinito, migliora la diagnostica di autenticazione e abilita l'adattatore per impostazione predefinita",
+        "es": "Corrige la URL API predeterminada incorrecta, mejora el diagnóstico de autenticación y habilita el adaptador por defecto",
+        "pl": "Naprawia błędny domyślny URL API, poprawia diagnostykę uwierzytelniania i domyślnie włącza adapter",
+        "uk": "Виправляє неправильний стандартний URL API, покращує діагностику автентифікації та вмикає адаптер за замовчуванням",
+        "zh-cn": "修复错误的默认 API URL，改进认证诊断，并默认启用适配器"
       }
     },
     "titleLang": {
@@ -51,7 +64,7 @@
     "main": "main.js",
     "icon": "ariston.png",
     "extIcon": "",
-    "enabled": false,
+    "enabled": true,
     "loglevel": "info",
     "mode": "daemon",
     "type": "climate-control",
@@ -75,7 +88,7 @@
   "native": {
     "username": "",
     "password": "",
-    "apiUrl": "https://www.ariston-net.remotethermo.com/R2/Account/",
+    "apiUrl": "https://www.ariston-net.remotethermo.com/api/v2/",
     "userAgent": "ioBroker-AristonRemoteThermoAI/1.0",
     "pollInterval": 180,
     "metric": true,
@@ -140,5 +153,5 @@
     }
   ],
   "instanceObjects": [],
-  "version": "1.0.0"
+  "version": "1.0.1"
 }

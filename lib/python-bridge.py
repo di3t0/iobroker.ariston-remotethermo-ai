@@ -6,6 +6,8 @@ import json
 import subprocess
 import sys
 import traceback
+import urllib.error
+import urllib.request
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Iterable
@@ -102,6 +104,53 @@ def bootstrap_local_deps(strategy: str) -> None:
     except Exception as exc:
         raise RuntimeError(f'Dependencies installed, but import still failed: {exc}')
 
+
+
+
+def normalize_api_url(value: str) -> str:
+    fallback = "https://www.ariston-net.remotethermo.com/api/v2/"
+    raw = str(value or "").strip()
+    if not raw:
+        return fallback
+    normalized = raw.rstrip("/") + "/"
+    if normalized.lower().endswith("/r2/account/") or normalized.lower().endswith("/account/"):
+        return fallback
+    return normalized
+
+
+def _mask_username(username: str) -> str:
+    username = str(username or "")
+    if "@" in username:
+        local, domain = username.split("@", 1)
+        shown = (local[:2] + "***") if local else "***"
+        return f"{shown}@{domain}"
+    if len(username) <= 3:
+        return "***"
+    return username[:2] + "***"
+
+
+def diagnose_auth_failure(username: str, password: str, api_url: str, user_agent: str) -> str:
+    api_url = normalize_api_url(api_url)
+    login_url = api_url + 'accounts/login'
+    payload = json.dumps({"usr": username, "pwd": password}).encode('utf-8')
+    req = urllib.request.Request(
+        login_url,
+        data=payload,
+        headers={
+            'Content-Type': 'application/json',
+            'User-Agent': user_agent,
+        },
+        method='POST',
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as response:
+            body = response.read(400).decode('utf-8', errors='replace')
+            return f"Authentication failed. Login endpoint responded HTTP {response.status}. URL={login_url}. User={_mask_username(username)}. Body={body}"
+    except urllib.error.HTTPError as exc:
+        body = exc.read(400).decode('utf-8', errors='replace')
+        return f"Authentication failed. HTTP {exc.code} from {login_url}. User={_mask_username(username)}. Body={body}"
+    except Exception as exc:
+        return f"Authentication failed while calling {login_url}. User={_mask_username(username)}. Diagnostic error: {exc}"
 
 def to_primitive(value: Any):
     if value is None or isinstance(value, (str, int, float, bool)):
@@ -334,9 +383,13 @@ async def connect_device(args):
     from ariston import Ariston, DeviceAttribute
 
     client = Ariston()
-    ok = await client.async_connect(args.username, args.password, args.api_url, args.user_agent)
+    api_url = normalize_api_url(args.api_url)
+    try:
+        ok = await client.async_connect(args.username, args.password, api_url, args.user_agent)
+    except Exception as exc:
+        raise RuntimeError(f"{diagnose_auth_failure(args.username, args.password, api_url, args.user_agent)} | Library error: {exc}")
     if not ok:
-        raise RuntimeError('Authentication failed')
+        raise RuntimeError(diagnose_auth_failure(args.username, args.password, api_url, args.user_agent))
 
     devices = await client.async_discover()
     if not devices:
@@ -362,9 +415,13 @@ async def discover_all(args):
     from ariston import Ariston, DeviceAttribute
 
     client = Ariston()
-    ok = await client.async_connect(args.username, args.password, args.api_url, args.user_agent)
+    api_url = normalize_api_url(args.api_url)
+    try:
+        ok = await client.async_connect(args.username, args.password, api_url, args.user_agent)
+    except Exception as exc:
+        raise RuntimeError(f"{diagnose_auth_failure(args.username, args.password, api_url, args.user_agent)} | Library error: {exc}")
     if not ok:
-        raise RuntimeError('Authentication failed')
+        raise RuntimeError(diagnose_auth_failure(args.username, args.password, api_url, args.user_agent))
     devices = await client.async_discover()
     payload = []
     for dev in devices:
@@ -499,6 +556,7 @@ async def main_async():
     parser.add_argument('--value', default='')
     parser.add_argument('--install-strategy', default='auto', choices=['auto', 'offline', 'online', 'system'])
     args = parser.parse_args()
+    args.api_url = normalize_api_url(args.api_url)
 
     try:
         bootstrap_local_deps(args.install_strategy)

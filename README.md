@@ -54,3 +54,11 @@ This build is designed to be more tolerant on typical ioBroker Linux hosts:
 - falls back to online install when needed
 
 Recommended setting for most systems: `installStrategy=auto`.
+
+
+## 1.0.1 notes
+
+- fixed the default API URL to `https://www.ariston-net.remotethermo.com/api/v2/`
+- old wrong values like `.../R2/Account/` are auto-normalized
+- improved authentication diagnostics in adapter logs
+- adapter enabled by default for cleaner initial setup

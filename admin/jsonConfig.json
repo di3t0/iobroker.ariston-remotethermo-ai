@@ -2,27 +2,98 @@
   "i18n": true,
   "type": "panel",
   "items": {
-    "username": {"type": "text", "label": "Ariston username/email", "newLine": true, "xs": 12, "sm": 6},
-    "password": {"type": "password", "label": "Ariston password", "xs": 12, "sm": 6},
-    "apiUrl": {"type": "text", "label": "API URL", "xs": 12, "sm": 8},
-    "userAgent": {"type": "text", "label": "User-Agent", "xs": 12, "sm": 4},
-    "pollInterval": {"type": "number", "label": "Polling interval (seconds)", "min": 30, "max": 3600, "xs": 12, "sm": 4},
-    "controlRefreshDelay": {"type": "number", "label": "Refresh delay after control write (seconds)", "min": 1, "max": 60, "xs": 12, "sm": 4},
-    "fullStateRefreshEvery": {"type": "number", "label": "Do full re-discovery every N polls", "min": 1, "max": 100, "xs": 12, "sm": 4},
-    "gatewayId": {"type": "text", "label": "Optional gatewayId filter", "xs": 12, "sm": 6},
-    "pythonBin": {"type": "text", "label": "Python binary", "xs": 12, "sm": 3},
+    "username": {
+      "type": "text",
+      "label": "Ariston username/email",
+      "newLine": true,
+      "xs": 12,
+      "sm": 6
+    },
+    "password": {
+      "type": "password",
+      "label": "Ariston password",
+      "xs": 12,
+      "sm": 6
+    },
+    "apiUrl": {
+      "type": "text",
+      "label": "API base URL",
+      "xs": 12,
+      "sm": 8,
+      "help": "Normally keep default: https://www.ariston-net.remotethermo.com/api/v2/"
+    },
+    "userAgent": {
+      "type": "text",
+      "label": "User-Agent",
+      "xs": 12,
+      "sm": 4
+    },
+    "pollInterval": {
+      "type": "number",
+      "label": "Polling interval (seconds)",
+      "min": 30,
+      "max": 3600,
+      "xs": 12,
+      "sm": 4
+    },
+    "controlRefreshDelay": {
+      "type": "number",
+      "label": "Refresh delay after control write (seconds)",
+      "min": 1,
+      "max": 60,
+      "xs": 12,
+      "sm": 4
+    },
+    "fullStateRefreshEvery": {
+      "type": "number",
+      "label": "Do full re-discovery every N polls",
+      "min": 1,
+      "max": 100,
+      "xs": 12,
+      "sm": 4
+    },
+    "gatewayId": {
+      "type": "text",
+      "label": "Optional gatewayId filter",
+      "xs": 12,
+      "sm": 6
+    },
+    "pythonBin": {
+      "type": "text",
+      "label": "Python binary",
+      "xs": 12,
+      "sm": 3
+    },
     "installStrategy": {
       "type": "select",
       "label": "Python dependency install strategy",
       "xs": 12,
       "sm": 3,
       "options": [
-        {"label": "auto", "value": "auto"},
-        {"label": "offline", "value": "offline"},
-        {"label": "online", "value": "online"},
-        {"label": "system", "value": "system"}
+        {
+          "label": "auto",
+          "value": "auto"
+        },
+        {
+          "label": "offline",
+          "value": "offline"
+        },
+        {
+          "label": "online",
+          "value": "online"
+        },
+        {
+          "label": "system",
+          "value": "system"
+        }
       ]
     },
-    "metric": {"type": "checkbox", "label": "Use metric units", "newLine": true, "xs": 12, "sm": 4}
+    "metric": {
+      "type": "checkbox",
+      "label": "Use metric units",
+      "newLine": true,
+      "xs": 12,
+      "sm": 4
+    }
   }
 }
