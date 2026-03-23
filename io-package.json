@@ -1,0 +1,132 @@
+{
+  "common": {
+    "name": "ariston-cloud",
+    "version": "1.0.0",
+    "news": {
+      "1.0.0": {
+        "en": "Production-oriented release with multi-device sync, richer controls, better error handling and bundled Python bootstrap",
+        "de": "Produktionsorientierte Version mit Mehrgeräte-Sync, erweiterten Steuerelementen, besserer Fehlerbehandlung und gebündeltem Python-Bootstrap",
+        "ru": "Версия для production с синхронизацией нескольких устройств, расширенным управлением, улучшенной обработкой ошибок и bundled Python bootstrap",
+        "pt": "Versão orientada a produção com sincronização de múltiplos dispositivos, mais controles, melhor tratamento de erros e bootstrap Python incluído",
+        "nl": "Productiegerichte versie met synchronisatie van meerdere apparaten, rijkere bediening, betere foutafhandeling en gebundelde Python-bootstrap",
+        "fr": "Version orientée production avec synchro multi-appareils, contrôles enrichis, meilleure gestion d'erreurs et bootstrap Python intégré",
+        "it": "Versione orientata alla produzione con sincronizzazione multi-dispositivo, controlli più ricchi, migliore gestione errori e bootstrap Python incluso",
+        "es": "Versión orientada a producción con sincronización multidispositivo, controles más completos, mejor gestión de errores y bootstrap Python integrado",
+        "pl": "Wersja produkcyjna z synchronizacją wielu urządzeń, bogatszym sterowaniem, lepszą obsługą błędów i dołączonym bootstrapem Pythona",
+        "uk": "Версія для production із синхронізацією кількох пристроїв, розширеним керуванням, кращою обробкою помилок і вбудованим Python bootstrap",
+        "zh-cn": "面向生产的版本，支持多设备同步、更丰富的控制、更好的错误处理以及内置 Python 引导"
+      }
+    },
+    "titleLang": {
+      "en": "Ariston Cloud",
+      "de": "Ariston Cloud",
+      "ru": "Ariston Cloud",
+      "pt": "Ariston Cloud",
+      "nl": "Ariston Cloud",
+      "fr": "Ariston Cloud",
+      "it": "Ariston Cloud",
+      "es": "Ariston Cloud",
+      "pl": "Ariston Cloud",
+      "uk": "Ariston Cloud",
+      "zh-cn": "Ariston Cloud"
+    },
+    "desc": {
+      "en": "ioBroker adapter for Ariston RemoteThermo using the upstream Python library with bundled bootstrap support",
+      "de": "ioBroker-Adapter für Ariston RemoteThermo mit der Upstream-Python-Bibliothek und gebündelter Bootstrap-Unterstützung",
+      "ru": "Адаптер ioBroker для Ariston RemoteThermo с использованием upstream Python-библиотеки и bundled bootstrap",
+      "pt": "Adaptador ioBroker para Ariston RemoteThermo usando a biblioteca Python upstream com suporte bootstrap incluído",
+      "nl": "ioBroker-adapter voor Ariston RemoteThermo met upstream Python-bibliotheek en gebundelde bootstrap-ondersteuning",
+      "fr": "Adaptateur ioBroker pour Ariston RemoteThermo utilisant la bibliothèque Python amont avec bootstrap intégré",
+      "it": "Adapter ioBroker per Ariston RemoteThermo che usa la libreria Python upstream con bootstrap incluso",
+      "es": "Adaptador ioBroker para Ariston RemoteThermo usando la biblioteca Python upstream con soporte bootstrap integrado",
+      "pl": "Adapter ioBroker dla Ariston RemoteThermo używający źródłowej biblioteki Python z dołączonym bootstrapem",
+      "uk": "Адаптер ioBroker для Ariston RemoteThermo з використанням upstream Python-бібліотеки та вбудованим bootstrap",
+      "zh-cn": "使用上游 Python 库并支持内置引导的 Ariston RemoteThermo ioBroker 适配器"
+    },
+    "authors": ["OpenAI"],
+    "license": "MIT",
+    "platform": "Javascript/Node.js",
+    "main": "main.js",
+    "icon": "ariston.png",
+    "extIcon": "",
+    "enabled": false,
+    "loglevel": "info",
+    "mode": "daemon",
+    "type": "climate-control",
+    "compact": true,
+    "connectionType": "cloud",
+    "dataSource": "poll",
+    "adminUI": {"config": "json"},
+    "dependencies": [{"js-controller": ">=5.0.19"}],
+    "globalDependencies": [{"admin": ">=6.13.16"}]
+  },
+  "native": {
+    "username": "",
+    "password": "",
+    "apiUrl": "https://www.ariston-net.remotethermo.com/R2/Account/",
+    "userAgent": "ioBroker-AristonCloud/1.0",
+    "pollInterval": 180,
+    "metric": true,
+    "pythonBin": "python3",
+    "gatewayId": "",
+    "installStrategy": "auto",
+    "controlRefreshDelay": 6,
+    "fullStateRefreshEvery": 10
+  },
+  "objects": [
+    {
+      "_id": "info.connection",
+      "type": "state",
+      "common": {
+        "name": "Connected to Ariston cloud",
+        "type": "boolean",
+        "role": "indicator.connected",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.lastSync",
+      "type": "state",
+      "common": {
+        "name": "Last successful sync timestamp",
+        "type": "string",
+        "role": "text",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.lastError",
+      "type": "state",
+      "common": {
+        "name": "Last error",
+        "type": "string",
+        "role": "text",
+        "read": true,
+        "write": false,
+        "def": ""
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.deviceCount",
+      "type": "state",
+      "common": {
+        "name": "Discovered device count",
+        "type": "number",
+        "role": "value",
+        "read": true,
+        "write": false,
+        "def": 0
+      },
+      "native": {}
+    }
+  ],
+  "instanceObjects": [],
+  "version": "1.0.0"
+}

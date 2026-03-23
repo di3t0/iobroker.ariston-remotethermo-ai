@@ -1,0 +1,19 @@
+{
+  "name": "iobroker.ariston-cloud",
+  "version": "1.0.0",
+  "description": "Production-oriented ioBroker adapter for Ariston RemoteThermo using bundled Python bridge and optional offline dependency bootstrap",
+  "author": "OpenAI",
+  "license": "MIT",
+  "main": "main.js",
+  "keywords": ["iobroker", "ariston", "remotethermo", "heating", "water-heater", "climate"],
+  "dependencies": {
+    "@iobroker/adapter-core": "^3.3.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "lint": "node -c main.js",
+    "check": "node -c main.js"
+  }
+}
