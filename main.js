@@ -4,9 +4,9 @@ const utils = require('@iobroker/adapter-core');
 const { spawn } = require('node:child_process');
 const path = require('node:path');
 
-class AristonCloudAdapter extends utils.Adapter {
+class AristonRemoteThermoAiAdapter extends utils.Adapter {
     constructor(options = {}) {
-        super({ ...options, name: 'ariston-cloud' });
+        super({ ...options, name: 'ariston-remotethermo-ai' });
         this.pollTimer = null;
         this.syncInProgress = false;
         this.pendingRefresh = false;
@@ -350,5 +350,5 @@ class AristonCloudAdapter extends utils.Adapter {
 if (require.main !== module) {
     module.exports = options => new AristonCloudAdapter(options);
 } else {
-    new AristonCloudAdapter();
+    new AristonRemoteThermoAiAdapter();
 }

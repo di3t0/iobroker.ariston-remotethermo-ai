@@ -1,6 +1,6 @@
 {
   "common": {
-    "name": "ariston-cloud",
+    "name": "ariston-remotethermo-ai",
     "version": "1.0.0",
     "news": {
       "1.0.0": {
@@ -18,17 +18,17 @@
       }
     },
     "titleLang": {
-      "en": "Ariston Cloud",
-      "de": "Ariston Cloud",
-      "ru": "Ariston Cloud",
-      "pt": "Ariston Cloud",
-      "nl": "Ariston Cloud",
-      "fr": "Ariston Cloud",
-      "it": "Ariston Cloud",
-      "es": "Ariston Cloud",
-      "pl": "Ariston Cloud",
-      "uk": "Ariston Cloud",
-      "zh-cn": "Ariston Cloud"
+      "en": "Ariston RemoteThermo AI",
+      "de": "Ariston RemoteThermo AI",
+      "ru": "Ariston RemoteThermo AI",
+      "pt": "Ariston RemoteThermo AI",
+      "nl": "Ariston RemoteThermo AI",
+      "fr": "Ariston RemoteThermo AI",
+      "it": "Ariston RemoteThermo AI",
+      "es": "Ariston RemoteThermo AI",
+      "pl": "Ariston RemoteThermo AI",
+      "uk": "Ariston RemoteThermo AI",
+      "zh-cn": "Ariston RemoteThermo AI"
     },
     "desc": {
       "en": "ioBroker adapter for Ariston RemoteThermo using the upstream Python library with bundled bootstrap support",
@@ -43,7 +43,9 @@
       "uk": "Адаптер ioBroker для Ariston RemoteThermo з використанням upstream Python-бібліотеки та вбудованим bootstrap",
       "zh-cn": "使用上游 Python 库并支持内置引导的 Ariston RemoteThermo ioBroker 适配器"
     },
-    "authors": ["OpenAI"],
+    "authors": [
+      "OpenAI"
+    ],
     "license": "MIT",
     "platform": "Javascript/Node.js",
     "main": "main.js",
@@ -56,15 +58,25 @@
     "compact": true,
     "connectionType": "cloud",
     "dataSource": "poll",
-    "adminUI": {"config": "json"},
-    "dependencies": [{"js-controller": ">=5.0.19"}],
-    "globalDependencies": [{"admin": ">=6.13.16"}]
+    "adminUI": {
+      "config": "json"
+    },
+    "dependencies": [
+      {
+        "js-controller": ">=5.0.19"
+      }
+    ],
+    "globalDependencies": [
+      {
+        "admin": ">=6.13.16"
+      }
+    ]
   },
   "native": {
     "username": "",
     "password": "",
     "apiUrl": "https://www.ariston-net.remotethermo.com/R2/Account/",
-    "userAgent": "ioBroker-AristonCloud/1.0",
+    "userAgent": "ioBroker-AristonRemoteThermoAI/1.0",
     "pollInterval": 180,
     "metric": true,
     "pythonBin": "python3",
