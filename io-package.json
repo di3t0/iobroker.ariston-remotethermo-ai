@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "ariston-remotethermo-ai",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "news": {
       "1.0.0": {
         "en": "Production-oriented release with multi-device sync, richer controls, better error handling and bundled Python bootstrap",
@@ -16,7 +16,7 @@
         "uk": "Версія для production із синхронізацією кількох пристроїв, розширеним керуванням, кращою обробкою помилок і вбудованим Python bootstrap",
         "zh-cn": "面向生产的版本，支持多设备同步、更丰富的控制、更好的错误处理以及内置 Python 引导"
       },
-      "1.0.1": {
+      "1.1.0": {
         "en": "Fixes wrong default API URL, improves auth diagnostics and enables the adapter by default",
         "de": "Behebt die falsche Standard-API-URL, verbessert die Auth-Diagnose und aktiviert den Adapter standardmäßig",
         "ru": "Исправляет неверный URL API по умолчанию, улучшает диагностику аутентификации и включает адаптер по умолчанию",
@@ -153,5 +153,5 @@
     }
   ],
   "instanceObjects": [],
-  "version": "1.0.1"
+  "version": "1.1.0"
 }

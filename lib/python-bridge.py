@@ -227,6 +227,72 @@ def guess_operation_modes(device):
     return []
 
 
+
+
+def minutes_to_hhmm(value: Any):
+    try:
+        minutes = int(value)
+    except Exception:
+        return None
+    if minutes < 0:
+        return None
+    hh = (minutes // 60) % 24
+    mm = minutes % 60
+    return f"{hh:02d}:{mm:02d}"
+
+
+def map_water_heater_mode(device, raw_value: Any):
+    try:
+        enum_cls = device.water_heater_mode
+        if isinstance(raw_value, str):
+            return raw_value
+        if raw_value is None:
+            return None
+        raw_int = int(raw_value)
+        for member in enum_cls:
+            if int(member.value) == raw_int:
+                return member.name
+    except Exception:
+        return raw_value
+    return raw_value
+
+
+def enrich_values(device, values: dict[str, Any], units: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    out = dict(values)
+    unit_map = dict(units)
+    mode_name = map_water_heater_mode(device, values.get('water_heater_mode'))
+    if mode_name is not None:
+        out['water_heater_mode_name'] = mode_name
+    if values.get('proc_req_temp') is not None:
+        out['target_water_heater_temperature'] = values.get('proc_req_temp')
+        unit_map['target_water_heater_temperature'] = units.get('water_heater_temperature') or '°C'
+    if values.get('av_shw') is not None:
+        out['available_showers_estimate'] = values.get('av_shw')
+    if values.get('night_mode_begin_as_minutes') is not None:
+        out['night_mode_begin_hhmm'] = minutes_to_hhmm(values.get('night_mode_begin_as_minutes'))
+    if values.get('night_mode_end_as_minutes') is not None:
+        out['night_mode_end_hhmm'] = minutes_to_hhmm(values.get('night_mode_end_as_minutes'))
+
+    for attr in [
+        'water_heater_maximum_setpoint_temperature_minimum',
+        'water_heater_maximum_setpoint_temperature_maximum',
+        'anti_cooling_temperature_minimum',
+        'anti_cooling_temperature_maximum',
+        'electric_consumption_for_water_last_two_hours',
+        'online',
+        'available',
+    ]:
+        try:
+            value = getattr(device, attr)
+        except Exception:
+            continue
+        primitive = to_primitive(value)
+        if primitive is not None:
+            out[attr] = primitive
+            if 'temperature' in attr:
+                unit_map[attr] = '°C'
+    return out, unit_map
+
 def build_controls(device, methods: list[str], values: dict[str, Any], units: dict[str, Any]) -> list[dict[str, Any]]:
     controls: list[dict[str, Any]] = []
     zones = get_zone_numbers(values)
@@ -246,7 +312,7 @@ def build_controls(device, methods: list[str], values: dict[str, Any], units: di
             role='level.mode',
             method='async_set_water_heater_operation_mode',
             states=operation_modes,
-            current=values.get('water_heater_mode'),
+            current=map_water_heater_mode(device, values.get('water_heater_mode')),
         )
 
     if 'async_set_water_heater_temperature' in methods:
@@ -259,7 +325,7 @@ def build_controls(device, methods: list[str], values: dict[str, Any], units: di
             unit=units.get('water_heater_temperature') or '°C',
             min=30,
             max=80,
-            current=values.get('water_heater_temperature') or values.get('proc_req_temp'),
+            current=values.get('target_water_heater_temperature') or values.get('water_heater_temperature') or values.get('proc_req_temp'),
         )
 
     if 'async_set_water_heater_reduced_temperature' in methods:
@@ -279,7 +345,7 @@ def build_controls(device, methods: list[str], values: dict[str, Any], units: di
         add_control(controls, 'eco_mode', type='boolean', role='switch.mode.eco', method='async_set_eco_mode', current=values.get('water_heater_eco'))
 
     if 'async_set_antilegionella' in methods:
-        add_control(controls, 'antilegionella', type='boolean', role='switch.enable', method='async_set_antilegionella', current=values.get('antilegionella'))
+        add_control(controls, 'antilegionella', type='boolean', role='switch.enable', method='async_set_antilegionella', current=values.get('water_anti_leg'))
 
     if 'async_set_water_heater_number_of_showers' in methods:
         add_control(controls, 'number_of_showers', type='number', role='level', method='async_set_water_heater_number_of_showers', min=1, max=8, current=values.get('water_heater_number_of_showers'))
@@ -308,8 +374,23 @@ def build_controls(device, methods: list[str], values: dict[str, Any], units: di
     if 'async_set_heating_rate' in methods:
         add_control(controls, 'heating_rate', type='number', role='level', method='async_set_heating_rate', min=0, max=100, current=values.get('heating_rate'))
 
-    if 'async_set_max_setpoint_temp' in methods:
-        add_control(controls, 'max_setpoint_temp', type='number', role='level.temperature', method='async_set_max_setpoint_temp', unit='°C', min=30, max=80, current=values.get('max_setpoint_temp'))
+    if 'async_set_permanent_boost_value' in methods:
+        add_control(controls, 'permanent_boost', type='boolean', role='switch.enable', method='async_set_permanent_boost_value', current=bool(values.get('permanent_boost')))
+
+    if 'async_set_anti_cooling_value' in methods:
+        add_control(controls, 'anti_cooling', type='boolean', role='switch.enable', method='async_set_anti_cooling_value', current=bool(values.get('anti_cooling')))
+
+    if 'async_set_cooling_temperature_value' in methods:
+        add_control(controls, 'anti_cooling_temperature', type='number', role='level.temperature', method='async_set_cooling_temperature_value', unit='°C', min=values.get('anti_cooling_temperature_minimum') or 30, max=values.get('anti_cooling_temperature_maximum') or 80, current=values.get('anti_cooling_temperature'))
+
+    if 'async_set_night_mode_value' in methods:
+        add_control(controls, 'night_mode', type='boolean', role='switch.enable', method='async_set_night_mode_value', current=bool(values.get('night_mode')))
+
+    if 'async_set_night_mode_begin_as_minutes_value' in methods:
+        add_control(controls, 'night_mode_begin_as_minutes', type='number', role='level', method='async_set_night_mode_begin_as_minutes_value', min=values.get('night_mode_begin_min_as_minutes') or 0, max=values.get('night_mode_begin_max_as_minutes') or 1439, current=values.get('night_mode_begin_as_minutes'))
+
+    if 'async_set_night_mode_end_as_minutes_value' in methods:
+        add_control(controls, 'night_mode_end_as_minutes', type='number', role='level', method='async_set_night_mode_end_as_minutes_value', min=values.get('night_mode_end_min_as_minutes') or 0, max=values.get('night_mode_end_max_as_minutes') or 1439, current=values.get('night_mode_end_as_minutes'))
 
     for zone in zones:
         if 'async_set_comfort_temp' in methods:
@@ -458,6 +539,7 @@ def collect_state_payload(device, devices: Iterable[Any]):
         elif name in ('name', 'system_type', 'whe_type', 'has_metering', 'has_dhw', 'available', 'online'):
             meta[name] = to_primitive(attr)
 
+    values, units = enrich_values(device, values, units)
     meta['device_class'] = device.__class__.__name__
     controls = build_controls(device, methods, values, units)
     return {
@@ -468,6 +550,12 @@ def collect_state_payload(device, devices: Iterable[Any]):
         'methods': sorted(methods),
         'controls': controls,
         'device_count': len(list(devices)),
+        'raw': {
+            'data': to_primitive(getattr(device, 'data', None)),
+            'plant_settings': to_primitive(getattr(device, 'plant_settings', None)),
+            'errors': to_primitive(getattr(device, 'errors', None)),
+            'features': to_primitive(getattr(device, 'features', None)),
+        },
     }
 
 

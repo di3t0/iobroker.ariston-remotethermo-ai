@@ -172,7 +172,7 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
             common: { name: device.name || gateway },
             native: { gateway, serial: device.serial || '', raw: device.raw || {} },
         });
-        for (const channel of ['info', 'meta', 'values', 'controls']) {
+        for (const channel of ['info', 'meta', 'values', 'controls', 'raw']) {
             await this.setObjectNotExistsAsync(`devices.${gateway}.${channel}`, {
                 type: 'channel',
                 common: { name: channel.charAt(0).toUpperCase() + channel.slice(1) },
@@ -182,6 +182,11 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
         await this.setObjectNotExistsAsync(`devices.${gateway}.info.discovery_raw`, {
             type: 'state',
             common: { name: 'Discovery payload', type: 'string', role: 'json', read: true, write: false, def: '{}' },
+            native: {},
+        });
+        await this.setObjectNotExistsAsync(`devices.${gateway}.raw.full_state`, {
+            type: 'state',
+            common: { name: 'Full raw state payload', type: 'string', role: 'json', read: true, write: false, def: '{}' },
             native: {},
         });
     }
@@ -204,6 +209,8 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
             type = 'boolean';
             role = writable ? 'switch.enable' : 'indicator';
         }
+        if (/mode_name$/i.test(key)) role = 'text';
+        if (/hhmm$/i.test(key)) { type = 'string'; role = 'text'; }
         const common = { name: key, type, role, read: true, write: writable };
         if (unit) common.unit = String(unit);
         return common;
@@ -223,6 +230,7 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
         if (Array.isArray(control.states) && control.states.length) {
             common.states = Object.fromEntries(control.states.map(v => [v, v]));
         }
+        if (control.id === 'mode') common.role = 'level.mode';
         return common;
     }
 
@@ -251,6 +259,9 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
         const units = payload.units || {};
         const meta = payload.device || {};
         const controls = payload.controls || [];
+        const raw = payload.raw || {};
+
+        await this.setStateAsync(`devices.${gateway}.raw.full_state`, JSON.stringify(payload, null, 2), true);
 
         for (const [key, value] of Object.entries(meta)) {
             const id = `devices.${gateway}.meta.${this.normalizeIdPart(key)}`;

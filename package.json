@@ -1,6 +1,6 @@
 {
   "name": "iobroker.ariston-remotethermo-ai",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "ioBroker adapter for Ariston RemoteThermo using bundled Python bridge and bundled dependency bootstrap",
   "author": "OpenAI",
   "license": "MIT",
