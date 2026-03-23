@@ -484,11 +484,19 @@ def build_controls(device, methods: list[str], values: dict[str, Any], units: di
         add_control(controls, 'night_mode', type='boolean', role='switch.enable', method='async_set_night_mode_value', current=as_bool(values.get('night_mode')))
 
     if 'async_set_night_mode_begin_as_minutes_value' in methods:
-        begin_min, begin_max = ordered_min_max(values.get('night_mode_begin_min_as_minutes'), values.get('night_mode_begin_max_as_minutes'))
+        begin_min, begin_max = normalize_time_control_bounds(
+            values.get('night_mode_begin_as_minutes'),
+            values.get('night_mode_begin_min_as_minutes'),
+            values.get('night_mode_begin_max_as_minutes'),
+        )
         add_control(controls, 'night_mode_begin_as_minutes', type='number', role='level', method='async_set_night_mode_begin_as_minutes_value', min=begin_min, max=begin_max, current=values.get('night_mode_begin_as_minutes'))
 
     if 'async_set_night_mode_end_as_minutes_value' in methods:
-        end_min, end_max = ordered_min_max(values.get('night_mode_end_min_as_minutes'), values.get('night_mode_end_max_as_minutes'))
+        end_min, end_max = normalize_time_control_bounds(
+            values.get('night_mode_end_as_minutes'),
+            values.get('night_mode_end_min_as_minutes'),
+            values.get('night_mode_end_max_as_minutes'),
+        )
         add_control(controls, 'night_mode_end_as_minutes', type='number', role='level', method='async_set_night_mode_end_as_minutes_value', min=end_min, max=end_max, current=values.get('night_mode_end_as_minutes'))
 
     for zone in zones:
@@ -694,6 +702,10 @@ def parse_control_value(control: dict[str, Any], raw_value: Any):
             return mode_map[sval]
         if sval.isdigit() and str(int(sval)) in mode_map:
             return mode_map[str(int(sval))]
+        allowed = control.get('states') or []
+        for candidate in allowed:
+            if str(candidate).upper() == sval.upper():
+                return str(candidate)
         return sval.upper()
     return str(raw_value)
 

@@ -357,6 +357,16 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
         return result;
     }
 
+    async markControlAccepted(relativeId, value) {
+        await this.setStateAsync(relativeId, value, true);
+    }
+
+    async schedulePostControlRefresh(controlId) {
+        const delaySec = Math.max(Number(this.config.controlRefreshDelay) || 6, 1);
+        await this.scheduleSync({ full: false, reason: `control:${controlId}:fast`, delayMs: delaySec * 1000 });
+        await this.scheduleSync({ full: true, reason: `control:${controlId}:verify`, delayMs: Math.max(delaySec + 6, 10) * 1000 });
+    }
+
     async onStateChange(id, state) {
         if (!state || state.ack) return;
         try {
@@ -383,15 +393,22 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
             const obj = await this.getObjectAsync(relativeId);
             if (!obj?.native?.id) throw new Error(`Missing native control mapping for ${relativeId}`);
             const gatewayId = obj.native.gateway || relativeId.split('.')[1] || this.config.gatewayId || '';
-            await this.executeControl(obj.native, state.val, gatewayId);
-            await this.scheduleSync({
-                full: false,
-                reason: `control:${obj.native.id}`,
-                delayMs: Math.max(Number(this.config.controlRefreshDelay) || 6, 1) * 1000,
-            });
+            const result = await this.executeControl(obj.native, state.val, gatewayId);
+            this.log.info(`Control ${obj.native.id} accepted for gateway ${gatewayId}: ${JSON.stringify(result.args || [state.val])}`);
+            await this.markControlAccepted(relativeId, state.val);
+            await this.schedulePostControlRefresh(obj.native.id);
         } catch (error) {
             this.log.error(`State change handling failed: ${error.message}`);
             await this.setStateAsync('info.lastError', String(error.message), true);
+            try {
+                const relativeId = id.replace(`${this.namespace}.`, '');
+                const obj = await this.getObjectAsync(relativeId);
+                if (obj?.native?.current !== undefined) {
+                    await this.setStateAsync(relativeId, this.serializeValue(obj.native.current), true);
+                }
+            } catch {
+                // ignore rollback failures
+            }
         }
     }
 
