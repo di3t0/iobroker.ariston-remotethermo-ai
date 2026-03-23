@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "ariston-remotethermo-ai",
-    "version": "1.1.0",
+    "version": "1.1.2",
     "news": {
       "1.0.0": {
         "en": "Production-oriented release with multi-device sync, richer controls, better error handling and bundled Python bootstrap",
@@ -31,30 +31,30 @@
       }
     },
     "titleLang": {
-      "en": "Ariston RemoteThermo AI",
-      "de": "Ariston RemoteThermo AI",
-      "ru": "Ariston RemoteThermo AI",
-      "pt": "Ariston RemoteThermo AI",
-      "nl": "Ariston RemoteThermo AI",
-      "fr": "Ariston RemoteThermo AI",
-      "it": "Ariston RemoteThermo AI",
-      "es": "Ariston RemoteThermo AI",
-      "pl": "Ariston RemoteThermo AI",
-      "uk": "Ariston RemoteThermo AI",
-      "zh-cn": "Ariston RemoteThermo AI"
+      "en": "Ariston RemoteThermo",
+      "de": "Ariston RemoteThermo",
+      "ru": "Ariston RemoteThermo",
+      "pt": "Ariston RemoteThermo",
+      "nl": "Ariston RemoteThermo",
+      "fr": "Ariston RemoteThermo",
+      "it": "Ariston RemoteThermo",
+      "es": "Ariston RemoteThermo",
+      "pl": "Ariston RemoteThermo",
+      "uk": "Ariston RemoteThermo",
+      "zh-cn": "Ariston RemoteThermo"
     },
     "desc": {
-      "en": "ioBroker adapter for Ariston RemoteThermo using the upstream Python library with bundled bootstrap support",
-      "de": "ioBroker-Adapter für Ariston RemoteThermo mit der Upstream-Python-Bibliothek und gebündelter Bootstrap-Unterstützung",
-      "ru": "Адаптер ioBroker для Ariston RemoteThermo с использованием upstream Python-библиотеки и bundled bootstrap",
-      "pt": "Adaptador ioBroker para Ariston RemoteThermo usando a biblioteca Python upstream com suporte bootstrap incluído",
-      "nl": "ioBroker-adapter voor Ariston RemoteThermo met upstream Python-bibliotheek en gebundelde bootstrap-ondersteuning",
-      "fr": "Adaptateur ioBroker pour Ariston RemoteThermo utilisant la bibliothèque Python amont avec bootstrap intégré",
-      "it": "Adapter ioBroker per Ariston RemoteThermo che usa la libreria Python upstream con bootstrap incluso",
-      "es": "Adaptador ioBroker para Ariston RemoteThermo usando la biblioteca Python upstream con soporte bootstrap integrado",
-      "pl": "Adapter ioBroker dla Ariston RemoteThermo używający źródłowej biblioteki Python z dołączonym bootstrapem",
-      "uk": "Адаптер ioBroker для Ariston RemoteThermo з використанням upstream Python-бібліотеки та вбудованим bootstrap",
-      "zh-cn": "使用上游 Python 库并支持内置引导的 Ariston RemoteThermo ioBroker 适配器"
+      "en": "ioBroker adapter for Ariston RemoteThermo devices with bundled Python bridge and tuned Lydos Hybrid mapping",
+      "de": "ioBroker adapter for Ariston RemoteThermo devices with bundled Python bridge and tuned Lydos Hybrid mapping",
+      "ru": "ioBroker adapter for Ariston RemoteThermo devices with bundled Python bridge and tuned Lydos Hybrid mapping",
+      "pt": "ioBroker adapter for Ariston RemoteThermo devices with bundled Python bridge and tuned Lydos Hybrid mapping",
+      "nl": "ioBroker adapter for Ariston RemoteThermo devices with bundled Python bridge and tuned Lydos Hybrid mapping",
+      "fr": "ioBroker adapter for Ariston RemoteThermo devices with bundled Python bridge and tuned Lydos Hybrid mapping",
+      "it": "ioBroker adapter for Ariston RemoteThermo devices with bundled Python bridge and tuned Lydos Hybrid mapping",
+      "es": "ioBroker adapter for Ariston RemoteThermo devices with bundled Python bridge and tuned Lydos Hybrid mapping",
+      "pl": "ioBroker adapter for Ariston RemoteThermo devices with bundled Python bridge and tuned Lydos Hybrid mapping",
+      "uk": "ioBroker adapter for Ariston RemoteThermo devices with bundled Python bridge and tuned Lydos Hybrid mapping",
+      "zh-cn": "ioBroker adapter for Ariston RemoteThermo devices with bundled Python bridge and tuned Lydos Hybrid mapping"
     },
     "authors": [
       "OpenAI"
@@ -153,5 +153,5 @@
     }
   ],
   "instanceObjects": [],
-  "version": "1.1.0"
+  "version": "1.1.2"
 }

@@ -62,3 +62,18 @@ Recommended setting for most systems: `installStrategy=auto`.
 - old wrong values like `.../R2/Account/` are auto-normalized
 - improved authentication diagnostics in adapter logs
 - adapter enabled by default for cleaner initial setup
+
+
+## Automation states
+
+Recommended readable states for automation on Lydos Hybrid:
+- `devices.<gateway>.values.water_heater_mode_name`
+- `devices.<gateway>.values.water_heater_mode`
+- `devices.<gateway>.values.target_water_heater_temperature`
+- `devices.<gateway>.values.water_heater_power`
+- `devices.<gateway>.values.available_showers_estimate`
+
+Recommended writable states:
+- `devices.<gateway>.controls.mode`
+- `devices.<gateway>.controls.dhw_set_temperature`
+- `devices.<gateway>.controls.power`
