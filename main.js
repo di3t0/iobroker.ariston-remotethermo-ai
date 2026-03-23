@@ -203,8 +203,13 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
         let type = 'string';
         let role = writable ? 'state' : 'text';
         if (typeof value === 'number') {
-            type = 'number';
-            role = /temp/i.test(key) ? 'value.temperature' : 'value';
+            if (/(^|_)(anti_cooling|night_mode|permanent_boost|water_anti_leg|is_heating)(_|$)/i.test(key) && (value === 0 || value === 1)) {
+                type = 'boolean';
+                role = writable ? 'switch.enable' : 'indicator';
+            } else {
+                type = 'number';
+                role = /temp/i.test(key) ? 'value.temperature' : 'value';
+            }
         } else if (typeof value === 'boolean') {
             type = 'boolean';
             role = writable ? 'switch.enable' : 'indicator';
@@ -225,8 +230,13 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
             write: true,
         };
         if (control.unit) common.unit = control.unit;
-        if (typeof control.min === 'number') common.min = control.min;
-        if (typeof control.max === 'number') common.max = control.max;
+        if (typeof control.min === 'number' && typeof control.max === 'number') {
+            common.min = Math.min(control.min, control.max);
+            common.max = Math.max(control.min, control.max);
+        } else {
+            if (typeof control.min === 'number') common.min = control.min;
+            if (typeof control.max === 'number') common.max = control.max;
+        }
         if (Array.isArray(control.states) && control.states.length) {
             common.states = Object.fromEntries(control.states.map(v => [v, v]));
         }

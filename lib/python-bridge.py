@@ -72,7 +72,9 @@ def bootstrap_local_deps(strategy: str) -> None:
         raise RuntimeError('python-wheels directory not found and ariston is not installed')
 
     LOCAL_DEPS_DIR.mkdir(parents=True, exist_ok=True)
-    package_spec = ['ariston==0.19.9', 'requests>=2.31.0']
+    ariston_wheels = sorted(WHEEL_DIR.glob('ariston-0.19.9-*.whl'))
+    package_spec = [str(ariston_wheels[0])] if ariston_wheels else ['ariston==0.19.9']
+    package_spec += ['requests>=2.31.0']
 
     offline_err = ''
     online_err = ''
@@ -215,7 +217,8 @@ def guess_operation_modes(device):
     if 'velis' in name:
         return enum_names(VelisPlantMode)
     if 'lydos' in name:
-        return enum_names(LydosPlantMode)
+        names = enum_names(LydosPlantMode)
+        return names or ['IMEMORY', 'GREEN', 'PROGRAM', 'BOOST']
     if 'nuossplit' in name or 'nuossplit' in name:
         return enum_names(NuosSplitOperativeMode)
     if 'evo' in name:
@@ -239,6 +242,35 @@ def minutes_to_hhmm(value: Any):
     hh = (minutes // 60) % 24
     mm = minutes % 60
     return f"{hh:02d}:{mm:02d}"
+
+
+def as_bool(value: Any):
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(int(value))
+    sval = str(value).strip().lower()
+    if sval in ('1', 'true', 'on', 'yes'):
+        return True
+    if sval in ('0', 'false', 'off', 'no'):
+        return False
+    return None
+
+
+def ordered_min_max(a: Any, b: Any, fallback_min: int = 0, fallback_max: int = 1439):
+    vals = []
+    for v in (a, b):
+        try:
+            vals.append(int(v))
+        except Exception:
+            pass
+    if not vals:
+        return fallback_min, fallback_max
+    if len(vals) == 1:
+        return vals[0], max(vals[0], fallback_max)
+    return min(vals), max(vals)
 
 
 def map_water_heater_mode(device, raw_value: Any):
@@ -282,11 +314,14 @@ def enrich_values(device, values: dict[str, Any], units: dict[str, Any]) -> tupl
         unit_map['current_water_heater_temperature'] = units.get('water_heater_temperature') or '°C'
 
     target_temp = values.get('target_water_heater_temperature')
-    if target_temp is None:
+    mode_name_upper = str(mode_name or '').upper()
+    if mode_name_upper == 'BOOST' and raw_data.get('boostReqTemp') is not None:
+        target_temp = raw_data.get('boostReqTemp')
+    if target_temp is None and raw_data.get('reqTemp') is not None:
         target_temp = raw_data.get('reqTemp')
     if target_temp is None:
         target_temp = values.get('water_heater_temperature')
-    if target_temp is None:
+    if target_temp is None and values.get('proc_req_temp') not in (None, 0, 16):
         target_temp = values.get('proc_req_temp')
     if target_temp is not None:
         out['target_water_heater_temperature'] = target_temp
@@ -306,6 +341,11 @@ def enrich_values(device, values: dict[str, Any], units: dict[str, Any]) -> tupl
 
     if values.get('is_heating') is None and raw_data.get('heatReq') is not None:
         out['is_heating'] = bool(raw_data.get('heatReq'))
+
+    for bool_key in ('anti_cooling', 'night_mode', 'permanent_boost', 'water_anti_leg'):
+        normalized = as_bool(out.get(bool_key))
+        if normalized is not None:
+            out[bool_key] = normalized
 
     if values.get('av_shw') is not None:
         out['available_showers_estimate'] = values.get('av_shw')
@@ -402,7 +442,7 @@ def build_controls(device, methods: list[str], values: dict[str, Any], units: di
         add_control(controls, 'eco_mode', type='boolean', role='switch.mode.eco', method='async_set_eco_mode', current=values.get('water_heater_eco'))
 
     if 'async_set_antilegionella' in methods:
-        add_control(controls, 'antilegionella', type='boolean', role='switch.enable', method='async_set_antilegionella', current=values.get('water_anti_leg'))
+        add_control(controls, 'antilegionella', type='boolean', role='switch.enable', method='async_set_antilegionella', current=as_bool(values.get('water_anti_leg')))
 
     if 'async_set_water_heater_number_of_showers' in methods:
         add_control(controls, 'number_of_showers', type='number', role='level', method='async_set_water_heater_number_of_showers', min=1, max=8, current=values.get('water_heater_number_of_showers'))
@@ -432,22 +472,24 @@ def build_controls(device, methods: list[str], values: dict[str, Any], units: di
         add_control(controls, 'heating_rate', type='number', role='level', method='async_set_heating_rate', min=0, max=100, current=values.get('heating_rate'))
 
     if 'async_set_permanent_boost_value' in methods:
-        add_control(controls, 'permanent_boost', type='boolean', role='switch.enable', method='async_set_permanent_boost_value', current=bool(values.get('permanent_boost')))
+        add_control(controls, 'permanent_boost', type='boolean', role='switch.enable', method='async_set_permanent_boost_value', current=as_bool(values.get('permanent_boost')))
 
     if 'async_set_anti_cooling_value' in methods:
-        add_control(controls, 'anti_cooling', type='boolean', role='switch.enable', method='async_set_anti_cooling_value', current=bool(values.get('anti_cooling')))
+        add_control(controls, 'anti_cooling', type='boolean', role='switch.enable', method='async_set_anti_cooling_value', current=as_bool(values.get('anti_cooling')))
 
     if 'async_set_cooling_temperature_value' in methods:
         add_control(controls, 'anti_cooling_temperature', type='number', role='level.temperature', method='async_set_cooling_temperature_value', unit='°C', min=values.get('anti_cooling_temperature_minimum') or 30, max=values.get('anti_cooling_temperature_maximum') or 80, current=values.get('anti_cooling_temperature'))
 
     if 'async_set_night_mode_value' in methods:
-        add_control(controls, 'night_mode', type='boolean', role='switch.enable', method='async_set_night_mode_value', current=bool(values.get('night_mode')))
+        add_control(controls, 'night_mode', type='boolean', role='switch.enable', method='async_set_night_mode_value', current=as_bool(values.get('night_mode')))
 
     if 'async_set_night_mode_begin_as_minutes_value' in methods:
-        add_control(controls, 'night_mode_begin_as_minutes', type='number', role='level', method='async_set_night_mode_begin_as_minutes_value', min=values.get('night_mode_begin_min_as_minutes') or 0, max=values.get('night_mode_begin_max_as_minutes') or 1439, current=values.get('night_mode_begin_as_minutes'))
+        begin_min, begin_max = ordered_min_max(values.get('night_mode_begin_min_as_minutes'), values.get('night_mode_begin_max_as_minutes'))
+        add_control(controls, 'night_mode_begin_as_minutes', type='number', role='level', method='async_set_night_mode_begin_as_minutes_value', min=begin_min, max=begin_max, current=values.get('night_mode_begin_as_minutes'))
 
     if 'async_set_night_mode_end_as_minutes_value' in methods:
-        add_control(controls, 'night_mode_end_as_minutes', type='number', role='level', method='async_set_night_mode_end_as_minutes_value', min=values.get('night_mode_end_min_as_minutes') or 0, max=values.get('night_mode_end_max_as_minutes') or 1439, current=values.get('night_mode_end_as_minutes'))
+        end_min, end_max = ordered_min_max(values.get('night_mode_end_min_as_minutes'), values.get('night_mode_end_max_as_minutes'))
+        add_control(controls, 'night_mode_end_as_minutes', type='number', role='level', method='async_set_night_mode_end_as_minutes_value', min=end_min, max=end_max, current=values.get('night_mode_end_as_minutes'))
 
     for zone in zones:
         if 'async_set_comfort_temp' in methods:

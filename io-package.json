@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "ariston-remotethermo-ai",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "news": {
       "1.0.0": {
         "en": "Production-oriented release with multi-device sync, richer controls, better error handling and bundled Python bootstrap",
@@ -28,6 +28,9 @@
         "pl": "Naprawia błędny domyślny URL API, poprawia diagnostykę uwierzytelniania i domyślnie włącza adapter",
         "uk": "Виправляє неправильний стандартний URL API, покращує діагностику автентифікації та вмикає адаптер за замовчуванням",
         "zh-cn": "修复错误的默认 API URL，改进认证诊断，并默认启用适配器"
+      },
+      "1.1.5": {
+        "en": "Fixes admin icon packaging, boolean normalization, night-mode limits and Lydos water temperature mapping"
       }
     },
     "titleLang": {
@@ -43,7 +46,7 @@
       "uk": "Ariston RemoteThermo",
       "zh-cn": "Ariston RemoteThermo"
     },
-    "desc": "ioBroker adapter for Ariston RemoteThermo devices with bundled Python bridge and improved Lydos Hybrid state mapping",
+    "desc": "ioBroker adapter for Ariston RemoteThermo devices with bundled Python bridge, improved Lydos Hybrid mapping and admin icon fixes",
     "authors": [
       "OpenAI"
     ],
@@ -51,7 +54,7 @@
     "platform": "Javascript/Node.js",
     "main": "main.js",
     "icon": "ariston.png",
-    "extIcon": "",
+    "extIcon": "https://raw.githubusercontent.com/di3t0/iobroker.ariston-remotethermo-ai/main/admin/ariston.png",
     "enabled": true,
     "loglevel": "info",
     "mode": "daemon",
@@ -141,5 +144,5 @@
     }
   ],
   "instanceObjects": [],
-  "version": "1.1.4"
+  "version": "1.1.5"
 }
