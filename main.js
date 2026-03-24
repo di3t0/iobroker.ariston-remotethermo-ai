@@ -33,6 +33,7 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
         await this.ensureBaseObjects();
         await this.setStateAsync('info.connection', false, true);
         await this.setStateAsync('info.lastError', '', true);
+        await this.setStateAsync('info.lastWriteDebug', '{}', true);
 
         this.correctedApiUrl = this.normalizeApiUrl(this.config.apiUrl);
         if (String(this.config.apiUrl || '').trim() !== this.correctedApiUrl) {
@@ -68,6 +69,11 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
         await this.setObjectNotExistsAsync('info.lastError', {
             type: 'state',
             common: { name: 'Last adapter error', type: 'string', role: 'text', read: true, write: false, def: '' },
+            native: {},
+        });
+        await this.setObjectNotExistsAsync('info.lastWriteDebug', {
+            type: 'state',
+            common: { name: 'Last control/invoke debug payload', type: 'string', role: 'json', read: true, write: false, def: '{}' },
             native: {},
         });
         await this.setObjectNotExistsAsync('info.lastSync', {
@@ -149,6 +155,7 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
             await this.setStateAsync('info.availableControls', JSON.stringify(allControls, null, 2), true);
             await this.setStateAsync('info.connection', true, true);
             await this.setStateAsync('info.lastError', '', true);
+        await this.setStateAsync('info.lastWriteDebug', '{}', true);
             await this.setStateAsync('info.lastSync', new Date().toISOString(), true);
             await this.setStateAsync('info.deviceCount', devices.length, true);
         } catch (error) {
@@ -361,6 +368,16 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
         await this.setStateAsync(relativeId, value, true);
     }
 
+    async writeDebug(kind, payload) {
+        try {
+            const body = { timestamp: new Date().toISOString(), kind, payload };
+            await this.setStateAsync('info.lastWriteDebug', JSON.stringify(body, null, 2), true);
+            this.log.info(`${kind} debug: ${JSON.stringify(payload)}`);
+        } catch (err) {
+            this.log.warn(`Failed to persist debug payload: ${err.message}`);
+        }
+    }
+
     async schedulePostControlRefresh(controlId) {
         const delaySec = Math.max(Number(this.config.controlRefreshDelay) || 6, 1);
         await this.scheduleSync({ full: false, reason: `control:${controlId}:fast`, delayMs: delaySec * 1000 });
@@ -378,7 +395,8 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
             if (id === `${this.namespace}.commands.invoke`) {
                 const payload = JSON.parse(String(state.val || '{}'));
                 if (!payload.method) throw new Error('commands.invoke requires JSON with field "method"');
-                await this.executeInvoke(payload);
+                const invokeResult = await this.executeInvoke(payload);
+                await this.writeDebug('invoke-success', invokeResult);
                 await this.setStateAsync('commands.invoke', '', true);
                 await this.scheduleSync({
                     full: true,
@@ -395,11 +413,13 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
             const gatewayId = obj.native.gateway || relativeId.split('.')[1] || this.config.gatewayId || '';
             const result = await this.executeControl(obj.native, state.val, gatewayId);
             this.log.info(`Control ${obj.native.id} accepted for gateway ${gatewayId}: ${JSON.stringify(result.args || [state.val])}`);
+            await this.writeDebug('control-success', { gatewayId, controlId: obj.native.id, requestedValue: state.val, result });
             await this.markControlAccepted(relativeId, state.val);
             await this.schedulePostControlRefresh(obj.native.id);
         } catch (error) {
             this.log.error(`State change handling failed: ${error.message}`);
             await this.setStateAsync('info.lastError', String(error.message), true);
+            await this.writeDebug('control-error', { stateId: id, message: String(error.message), stack: error.stack || '' });
             try {
                 const relativeId = id.replace(`${this.namespace}.`, '');
                 const obj = await this.getObjectAsync(relativeId);

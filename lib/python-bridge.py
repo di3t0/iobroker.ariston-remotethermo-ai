@@ -702,6 +702,7 @@ def collect_state_payload(device, devices: Iterable[Any]):
             'plant_settings': to_primitive(getattr(device, 'plant_settings', None)),
             'errors': to_primitive(getattr(device, 'errors', None)),
             'features': to_primitive(getattr(device, 'features', None)),
+            'mode_debug': get_mode_debug(device),
         },
     }
 
@@ -757,6 +758,35 @@ def current_mode_snapshot(device, devices):
     return payload.get("values", {}).get("water_heater_mode_name"), payload.get("values", {}).get("water_heater_mode")
 
 
+def get_mode_debug(device):
+    def _safe(name, default=None):
+        try:
+            return to_primitive(getattr(device, name))
+        except Exception:
+            return default
+
+    debug = {
+        'device_class': device.__class__.__name__,
+        'current_operation': _safe('water_heater_mode_operation_text'),
+        'current_operation_alt': _safe('current_water_heater_operation'),
+        'operation_texts': _safe('water_heater_mode_operation_texts', []),
+        'operation_list': _safe('operation_list', []),
+        'water_heater_mode_value': _safe('water_heater_mode_value'),
+        'water_heater_temperature_value': _safe('water_heater_temperature_value'),
+        'raw_data': to_primitive(getattr(device, 'data', None)),
+    }
+    try:
+        enum_cls = getattr(device, 'water_heater_mode', None)
+        if enum_cls is not None:
+            debug['enum_members'] = [{
+                'name': getattr(member, 'name', str(member)),
+                'value': to_primitive(getattr(member, 'value', None)),
+            } for member in enum_cls]
+    except Exception as exc:
+        debug['enum_members_error'] = str(exc)
+    return debug
+
+
 async def refresh_device_state(device):
     if hasattr(device, 'async_update_state'):
         await device.async_update_state()
@@ -766,36 +796,42 @@ async def refresh_device_state(device):
 
 async def invoke_with_fallback(device, method_name: str, invoke_args: list[Any], verify_mode: str | None = None, devices: Iterable[Any] | None = None):
     attempts: list[dict[str, Any]] = []
+    before_debug = get_mode_debug(device) if verify_mode else None
 
     async def _call(name: str):
         if not hasattr(device, name):
+            attempts.append({'method': name, 'args': to_primitive(invoke_args), 'skipped': 'missing'})
             return False, None
         method = getattr(device, name)
-        result = method(*invoke_args)
-        if inspect.isawaitable(result):
-            result = await result
-        attempts.append({'method': name, 'args': to_primitive(invoke_args), 'result': to_primitive(result)})
-        return True, result
+        try:
+            result = method(*invoke_args)
+            if inspect.isawaitable(result):
+                result = await result
+            attempts.append({'method': name, 'args': to_primitive(invoke_args), 'result': to_primitive(result)})
+            return True, result
+        except Exception as exc:
+            attempts.append({'method': name, 'args': to_primitive(invoke_args), 'error': str(exc)})
+            return True, None
 
     async def _verify():
         if not verify_mode or devices is None:
-            return True, None, None
+            return True, None, None, None
         await refresh_device_state(device)
         mode_name, mode_raw = current_mode_snapshot(device, devices)
-        return str(mode_name or '').upper() == str(verify_mode).upper(), mode_name, mode_raw
+        return str(mode_name or '').upper() == str(verify_mode).upper(), mode_name, mode_raw, get_mode_debug(device)
 
     primary_called, primary_result = await _call(method_name)
-    ok, mode_name, mode_raw = await _verify()
+    ok, mode_name, mode_raw, after_debug = await _verify()
     if ok:
-        return {'ok': True, 'result': to_primitive(primary_result), 'attempts': attempts, 'verified_mode_name': mode_name, 'verified_mode_raw': mode_raw}
+        return {'ok': True, 'result': to_primitive(primary_result), 'attempts': attempts, 'verified_mode_name': mode_name, 'verified_mode_raw': mode_raw, 'before_debug': before_debug, 'after_debug': after_debug}
 
     # sync fallback for mode writes
     fallback_name = method_name.replace('async_', '') if method_name.startswith('async_') else f'async_{method_name}'
     if verify_mode and fallback_name != method_name:
         await _call(fallback_name)
-        ok, mode_name, mode_raw = await _verify()
+        ok, mode_name, mode_raw, after_debug = await _verify()
         if ok:
-            return {'ok': True, 'result': to_primitive(primary_result), 'attempts': attempts, 'verified_mode_name': mode_name, 'verified_mode_raw': mode_raw}
+            return {'ok': True, 'result': to_primitive(primary_result), 'attempts': attempts, 'verified_mode_name': mode_name, 'verified_mode_raw': mode_raw, 'before_debug': before_debug, 'after_debug': after_debug}
 
     # direct API fallback for Lydos/Lydos Hybrid families
     if verify_mode and hasattr(device, 'api') and hasattr(device, 'water_heater_mode'):
@@ -811,13 +847,13 @@ async def invoke_with_fallback(device, method_name: str, invoke_args: list[Any],
                     if inspect.isawaitable(result):
                         result = await result
                     attempts.append({'method': f'api.{api_name}', 'args': [to_primitive(device.gw), getattr(enum_member, 'name', str(enum_member))], 'result': to_primitive(result)})
-                    ok, mode_name, mode_raw = await _verify()
+                    ok, mode_name, mode_raw, after_debug = await _verify()
                     if ok:
-                        return {'ok': True, 'result': to_primitive(result), 'attempts': attempts, 'verified_mode_name': mode_name, 'verified_mode_raw': mode_raw}
+                        return {'ok': True, 'result': to_primitive(result), 'attempts': attempts, 'verified_mode_name': mode_name, 'verified_mode_raw': mode_raw, 'before_debug': before_debug, 'after_debug': after_debug}
                 except Exception as exc:
                     attempts.append({'method': f'api.{api_name}', 'args': [to_primitive(device.gw), getattr(enum_member, 'name', str(enum_member))], 'error': str(exc)})
 
-    return {'ok': False, 'attempts': attempts, 'verified_mode_name': mode_name, 'verified_mode_raw': mode_raw, 'error': f'Mode write not verified after calling {method_name}'}
+    return {'ok': False, 'attempts': attempts, 'verified_mode_name': mode_name, 'verified_mode_raw': mode_raw, 'before_debug': before_debug, 'after_debug': after_debug, 'error': f'Mode write not verified after calling {method_name}'}
 
 
 async def cmd_invoke(args):

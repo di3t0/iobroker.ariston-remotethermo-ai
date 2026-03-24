@@ -92,3 +92,8 @@ Recommended states for automations on Lydos Hybrid:
 - Write setpoint to `devices.<gateway>.controls.dhw_set_temperature`
 
 `values.water_heater_mode` is a raw read-only numeric code and is not intended for direct writes.
+
+
+## Debug build
+
+This build adds `info.lastWriteDebug` and `raw.mode_debug` to help diagnose mode write failures.
