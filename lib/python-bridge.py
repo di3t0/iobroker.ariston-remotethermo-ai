@@ -734,25 +734,94 @@ def parse_control_value(control: dict[str, Any], raw_value: Any):
     return str(raw_value)
 
 
+def current_mode_snapshot(device, devices):
+    payload = collect_state_payload(device, devices)
+    return payload.get("values", {}).get("water_heater_mode_name"), payload.get("values", {}).get("water_heater_mode")
+
+
+async def refresh_device_state(device):
+    if hasattr(device, 'async_update_state'):
+        await device.async_update_state()
+    elif hasattr(device, 'update_state'):
+        device.update_state()
+
+
+async def invoke_with_fallback(device, method_name: str, invoke_args: list[Any], verify_mode: str | None = None, devices: Iterable[Any] | None = None):
+    attempts: list[dict[str, Any]] = []
+
+    async def _call(name: str):
+        if not hasattr(device, name):
+            return False, None
+        method = getattr(device, name)
+        result = method(*invoke_args)
+        if inspect.isawaitable(result):
+            result = await result
+        attempts.append({'method': name, 'args': to_primitive(invoke_args), 'result': to_primitive(result)})
+        return True, result
+
+    async def _verify():
+        if not verify_mode or devices is None:
+            return True, None, None
+        await refresh_device_state(device)
+        mode_name, mode_raw = current_mode_snapshot(device, devices)
+        return str(mode_name or '').upper() == str(verify_mode).upper(), mode_name, mode_raw
+
+    primary_called, primary_result = await _call(method_name)
+    ok, mode_name, mode_raw = await _verify()
+    if ok:
+        return {'ok': True, 'result': to_primitive(primary_result), 'attempts': attempts, 'verified_mode_name': mode_name, 'verified_mode_raw': mode_raw}
+
+    # sync fallback for mode writes
+    fallback_name = method_name.replace('async_', '') if method_name.startswith('async_') else f'async_{method_name}'
+    if verify_mode and fallback_name != method_name:
+        await _call(fallback_name)
+        ok, mode_name, mode_raw = await _verify()
+        if ok:
+            return {'ok': True, 'result': to_primitive(primary_result), 'attempts': attempts, 'verified_mode_name': mode_name, 'verified_mode_raw': mode_raw}
+
+    # direct API fallback for Lydos/Lydos Hybrid families
+    if verify_mode and hasattr(device, 'api') and hasattr(device, 'water_heater_mode'):
+        enum_member = getattr(device.water_heater_mode, str(verify_mode).upper(), None)
+        api_candidates = ('set_lydos_mode', 'async_set_lydos_mode', 'set_evo_mode', 'async_set_evo_mode', 'set_nuos_mode', 'async_set_nuos_mode', 'set_bsb_mode', 'async_set_bsb_mode')
+        if enum_member is not None:
+            for api_name in api_candidates:
+                api_method = getattr(device.api, api_name, None)
+                if api_method is None:
+                    continue
+                try:
+                    result = api_method(device.gw, enum_member)
+                    if inspect.isawaitable(result):
+                        result = await result
+                    attempts.append({'method': f'api.{api_name}', 'args': [to_primitive(device.gw), getattr(enum_member, 'name', str(enum_member))], 'result': to_primitive(result)})
+                    ok, mode_name, mode_raw = await _verify()
+                    if ok:
+                        return {'ok': True, 'result': to_primitive(result), 'attempts': attempts, 'verified_mode_name': mode_name, 'verified_mode_raw': mode_raw}
+                except Exception as exc:
+                    attempts.append({'method': f'api.{api_name}', 'args': [to_primitive(device.gw), getattr(enum_member, 'name', str(enum_member))], 'error': str(exc)})
+
+    return {'ok': False, 'attempts': attempts, 'verified_mode_name': mode_name, 'verified_mode_raw': mode_raw, 'error': f'Mode write not verified after calling {method_name}'}
+
+
 async def cmd_invoke(args):
-    _client, device, _devices = await connect_device(args)
+    _client, device, devices = await connect_device(args)
     method_name = args.method
     if not hasattr(device, method_name):
         raise RuntimeError(f'Method not found: {method_name}')
-    method = getattr(device, method_name)
     parsed_args = json.loads(args.invoke_args or '[]')
     if not isinstance(parsed_args, list):
         raise RuntimeError('invoke-args must be a JSON array')
-    result = method(*parsed_args)
-    if inspect.isawaitable(result):
-        result = await result
-    print(json.dumps({'ok': True, 'result': to_primitive(result)}, ensure_ascii=False))
+    verify_mode = None
+    if method_name in ('async_set_water_heater_operation_mode', 'set_water_heater_operation_mode') and parsed_args:
+        verify_mode = str(parsed_args[0]).upper()
+    result = await invoke_with_fallback(device, method_name, parsed_args, verify_mode=verify_mode, devices=devices)
+    if not result.get('ok'):
+        raise RuntimeError(json.dumps(result, ensure_ascii=False))
+    print(json.dumps(result, ensure_ascii=False))
 
 
 async def cmd_control(args):
     _client, device, devices = await connect_device(args)
-    if hasattr(device, 'async_update_state'):
-        await device.async_update_state()
+    await refresh_device_state(device)
 
     payload = collect_state_payload(device, devices)
     control = next((c for c in payload['controls'] if c.get('id') == args.control_id), None)
@@ -765,11 +834,12 @@ async def cmd_control(args):
 
     if not method_name or not hasattr(device, method_name):
         raise RuntimeError(f'Method not found for control {args.control_id}: {method_name}')
-    method = getattr(device, method_name)
-    result = method(*invoke_args)
-    if inspect.isawaitable(result):
-        result = await result
-    print(json.dumps({'ok': True, 'result': to_primitive(result), 'method': method_name, 'args': to_primitive(invoke_args)}, ensure_ascii=False))
+
+    verify_mode = str(parsed_value).upper() if args.control_id == 'mode' else None
+    result = await invoke_with_fallback(device, method_name, invoke_args, verify_mode=verify_mode, devices=devices)
+    if not result.get('ok'):
+        raise RuntimeError(json.dumps(result, ensure_ascii=False))
+    print(json.dumps({'ok': True, 'result': result.get('result'), 'method': method_name, 'args': to_primitive(invoke_args), 'attempts': result.get('attempts', []), 'verified_mode_name': result.get('verified_mode_name'), 'verified_mode_raw': result.get('verified_mode_raw')}, ensure_ascii=False))
 
 
 async def main_async():
