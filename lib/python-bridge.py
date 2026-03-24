@@ -202,6 +202,15 @@ def guess_operation_modes(device):
         VelisPlantMode,
     )
 
+    # First prefer the exact strings exposed by the python library for this device.
+    # Home Assistant uses these strings directly when writing operation mode.
+    try:
+        vals = getattr(device, 'water_heater_mode_operation_texts', None)
+        if vals:
+            return [str(v) for v in vals if str(v)]
+    except Exception:
+        pass
+
     name = device.__class__.__name__.lower()
     if 'galevo' in name:
         getter = getattr(device, '_get_item_by_id', None)
@@ -418,13 +427,20 @@ def build_controls(device, methods: list[str], values: dict[str, Any], units: di
             mapped = None
             try:
                 enum_cls = device.water_heater_mode
-                member = getattr(enum_cls, name, None)
+                member = getattr(enum_cls, str(name), None)
                 if member is not None:
                     mapped = int(member.value)
             except Exception:
                 mapped = None
             if mapped is not None:
-                mode_map[str(mapped)] = name
+                mode_map[str(mapped)] = str(name)
+        current_mode = None
+        try:
+            current_mode = getattr(device, 'water_heater_current_mode_text', None)
+        except Exception:
+            current_mode = None
+        if current_mode is None:
+            current_mode = map_water_heater_mode(device, values.get('water_heater_mode'))
         add_control(
             controls,
             'mode',
@@ -432,7 +448,7 @@ def build_controls(device, methods: list[str], values: dict[str, Any], units: di
             role='level.mode',
             method='async_set_water_heater_operation_mode',
             states=operation_modes,
-            current=map_water_heater_mode(device, values.get('water_heater_mode')),
+            current=current_mode,
             mode_map=mode_map,
         )
 
@@ -728,9 +744,11 @@ def parse_control_value(control: dict[str, Any], raw_value: Any):
             return mode_map[str(int(sval))]
         allowed = control.get('states') or []
         for candidate in allowed:
-            if str(candidate).upper() == sval.upper():
+            if str(candidate).strip().upper() == sval.upper():
                 return str(candidate)
-        return sval.upper()
+        # Do not force uppercase here. Pass through the exact string so the
+        # python library receives the same text style as Home Assistant.
+        return sval
     return str(raw_value)
 
 
@@ -812,7 +830,7 @@ async def cmd_invoke(args):
         raise RuntimeError('invoke-args must be a JSON array')
     verify_mode = None
     if method_name in ('async_set_water_heater_operation_mode', 'set_water_heater_operation_mode') and parsed_args:
-        verify_mode = str(parsed_args[0]).upper()
+        verify_mode = str(parsed_args[0]).strip()
     result = await invoke_with_fallback(device, method_name, parsed_args, verify_mode=verify_mode, devices=devices)
     if not result.get('ok'):
         raise RuntimeError(json.dumps(result, ensure_ascii=False))
@@ -835,7 +853,7 @@ async def cmd_control(args):
     if not method_name or not hasattr(device, method_name):
         raise RuntimeError(f'Method not found for control {args.control_id}: {method_name}')
 
-    verify_mode = str(parsed_value).upper() if args.control_id == 'mode' else None
+    verify_mode = str(parsed_value).strip() if args.control_id == 'mode' else None
     result = await invoke_with_fallback(device, method_name, invoke_args, verify_mode=verify_mode, devices=devices)
     if not result.get('ok'):
         raise RuntimeError(json.dumps(result, ensure_ascii=False))

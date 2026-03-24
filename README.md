@@ -1,3 +1,6 @@
+## 1.1.9
+- Mode control now uses the exact operation strings exposed by the python library, matching the Home Assistant write path more closely.
+
 # ioBroker Ariston RemoteThermo AI adapter
 
 Custom ioBroker adapter for Ariston NET / Remote Thermo cloud devices.
