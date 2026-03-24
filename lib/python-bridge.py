@@ -259,6 +259,30 @@ def as_bool(value: Any):
     return None
 
 
+
+
+def normalize_time_control_bounds(current: Any, reported_min: Any, reported_max: Any) -> tuple[int, int]:
+    def _to_int(v):
+        try:
+            return int(v)
+        except Exception:
+            return None
+
+    cur = _to_int(current)
+    mn = _to_int(reported_min)
+    mx = _to_int(reported_max)
+
+    candidates = [v for v in (cur, mn, mx) if v is not None and 0 <= v <= 1439]
+    if not candidates:
+        return 0, 1439
+
+    low = min(candidates)
+    high = max(candidates)
+
+    # Some Ariston payloads report min/max reversed or wrap-like values for night mode.
+    # Keep the range safe for ioBroker and always include the current value.
+    return max(0, low), min(1439, high)
+
 def ordered_min_max(a: Any, b: Any, fallback_min: int = 0, fallback_max: int = 1439):
     vals = []
     for v in (a, b):
