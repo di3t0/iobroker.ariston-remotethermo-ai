@@ -1,8 +1,8 @@
 {
   "name": "iobroker.ariston-remotethermo-ai",
-  "version": "1.1.11",
-  "description": "ioBroker adapter for Ariston RemoteThermo with bundled Python bridge, improved Lydos Hybrid mapping and admin icon fixes",
-  "author": "OpenAI",
+  "version": "1.2.0",
+  "description": "ioBroker adapter for Ariston RemoteThermo devices with bundled Python bridge and tuned Lydos Hybrid support",
+  "author": "di3t0",
   "license": "MIT",
   "main": "main.js",
   "keywords": [

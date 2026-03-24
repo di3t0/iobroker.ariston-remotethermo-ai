@@ -1,99 +1,58 @@
-## 1.1.9
-- Mode control now uses the exact operation strings exposed by the python library, matching the Home Assistant write path more closely.
+# ioBroker Ariston RemoteThermo AI
 
-# ioBroker Ariston RemoteThermo AI adapter
+ioBroker adapter for Ariston RemoteThermo devices with focus on Ariston Lydos Hybrid water heaters.
 
-Custom ioBroker adapter for Ariston NET / Remote Thermo cloud devices.
+## Features
 
-## Included
+- Ariston cloud login
+- device discovery
+- current and target water temperature states
+- water heater mode state
+- writable controls for common water-heater functions
+- bundled Python bridge using `ariston==0.19.9`
 
-- bundled `ariston==0.19.9`
-- bundled Python wheels for easier bootstrap
-- multi-device discovery and sync
-- writable controls for common heating and DHW functions
-- install strategies: `auto`, `offline`, `online`, `system`
+## Main writable controls
 
-## Important
-
-This is a custom adapter package for manual installation from GitHub.
-
-The adapter name in this package is:
-
-- npm package: `iobroker.ariston-remotethermo-ai`
-- ioBroker adapter name: `ariston-remotethermo-ai`
-
-These names are aligned so installation from GitHub works correctly.
-
-## Directory layout
-
-- `main.js` - ioBroker adapter runtime
-- `io-package.json` - ioBroker metadata and native config
-- `package.json` - Node package metadata
-- `admin/jsonConfig.json` - admin UI config form
-- `lib/python-bridge.py` - Python bridge for Ariston API access
-- `python-wheels/` - bundled Python packages
-- `ariston.png` - adapter icon
-
-## Installation from GitHub
-
-Example:
-
-```bash
-iobroker url https://github.com/di3t0/iobroker.ariston-remotethermo-ai.git --host iobroker --debug
-```
+- `controls.mode`
+- `controls.dhw_set_temperature`
+- `controls.power`
+- `controls.permanent_boost`
 
 ## Notes
 
-Bundled Python dependencies improve deployment convenience, but some binary wheels may still depend on the host platform and Python version.
+For Lydos Hybrid, operation mode and target temperature are separate.
+`BOOST` does not automatically force the target to 75°C.
+To boost heating to 75°C, set:
 
+- `controls.mode = BOOST`
+- `controls.dhw_set_temperature = 75`
 
-## Python compatibility notes
+## Recommended states for automation
 
-This build is designed to be more tolerant on typical ioBroker Linux hosts:
+### Read
 
-- works with system `python3`
-- bootstraps `pip` via `ensurepip` when `python3-pip` is missing
-- tries bundled wheels first when compatible
-- falls back to online install when needed
+- `values.current_water_heater_temperature`
+- `values.target_water_heater_temperature`
+- `values.water_heater_mode_name`
+- `values.water_heater_power`
 
-Recommended setting for most systems: `installStrategy=auto`.
+### Write
 
+- `controls.mode`
+- `controls.dhw_set_temperature`
+- `controls.power`
+- `controls.permanent_boost`
 
-## 1.1.0 notes
+## Installation
 
-- fixed the default API URL to `https://www.ariston-net.remotethermo.com/api/v2/`
-- old wrong values like `.../R2/Account/` are auto-normalized
-- improved authentication diagnostics in adapter logs
-- adapter enabled by default for cleaner initial setup
+Install from a GitHub custom adapter URL or from your own published repository.
 
+## Known limitations
 
-## Automation states
+- tested primarily against Ariston Lydos Hybrid
+- some device-specific features may vary by model
+- schedule editing is not implemented; existing scheduling configured in the Ariston app is preserved
 
-Recommended readable states for automation on Lydos Hybrid:
-- `devices.<gateway>.values.water_heater_mode_name`
-- `devices.<gateway>.values.water_heater_mode`
-- `devices.<gateway>.values.target_water_heater_temperature`
-- `devices.<gateway>.values.water_heater_power`
-- `devices.<gateway>.values.available_showers_estimate`
+## License
 
-Recommended writable states:
-- `devices.<gateway>.controls.mode`
-- `devices.<gateway>.controls.dhw_set_temperature`
-- `devices.<gateway>.controls.power`
-
-
-## Automation notes
-
-Recommended states for automations on Lydos Hybrid:
-
-- Read current water temperature from `devices.<gateway>.values.current_water_heater_temperature`
-- Read current mode from `devices.<gateway>.values.water_heater_mode_name`
-- Write mode to `devices.<gateway>.controls.mode` using `IMEMORY`, `GREEN`, `PROGRAM`, or `BOOST`
-- Write setpoint to `devices.<gateway>.controls.dhw_set_temperature`
-
-`values.water_heater_mode` is a raw read-only numeric code and is not intended for direct writes.
-
-
-## Debug build
-
-This build adds `info.lastWriteDebug` and `raw.mode_debug` to help diagnose mode write failures.
+MIT

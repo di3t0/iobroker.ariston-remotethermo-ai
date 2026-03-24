@@ -1,52 +1,42 @@
 {
   "common": {
     "name": "ariston-remotethermo-ai",
-    "version": "1.1.11",
+    "version": "1.2.0",
     "news": {
       "1.0.0": {
         "en": "Production-oriented release with multi-device sync, richer controls, better error handling and bundled Python bootstrap",
-        "de": "Produktionsorientierte Version mit Mehrger\u00e4te-Sync, erweiterten Steuerelementen, besserer Fehlerbehandlung und geb\u00fcndeltem Python-Bootstrap",
-        "ru": "\u0412\u0435\u0440\u0441\u0438\u044f \u0434\u043b\u044f production \u0441 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u0435\u0439 \u043d\u0435\u0441\u043a\u043e\u043b\u044c\u043a\u0438\u0445 \u0443\u0441\u0442\u0440\u043e\u0439\u0441\u0442\u0432, \u0440\u0430\u0441\u0448\u0438\u0440\u0435\u043d\u043d\u044b\u043c \u0443\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435\u043c, \u0443\u043b\u0443\u0447\u0448\u0435\u043d\u043d\u043e\u0439 \u043e\u0431\u0440\u0430\u0431\u043e\u0442\u043a\u043e\u0439 \u043e\u0448\u0438\u0431\u043e\u043a \u0438 bundled Python bootstrap",
-        "pt": "Vers\u00e3o orientada a produ\u00e7\u00e3o com sincroniza\u00e7\u00e3o de m\u00faltiplos dispositivos, mais controles, melhor tratamento de erros e bootstrap Python inclu\u00eddo",
+        "de": "Produktionsorientierte Version mit Mehrgeräte-Sync, erweiterten Steuerelementen, besserer Fehlerbehandlung und gebündeltem Python-Bootstrap",
+        "ru": "Версия для production с синхронизацией нескольких устройств, расширенным управлением, улучшенной обработкой ошибок и bundled Python bootstrap",
+        "pt": "Versão orientada a produção com sincronização de múltiplos dispositivos, mais controles, melhor tratamento de erros e bootstrap Python incluído",
         "nl": "Productiegerichte versie met synchronisatie van meerdere apparaten, rijkere bediening, betere foutafhandeling en gebundelde Python-bootstrap",
-        "fr": "Version orient\u00e9e production avec synchro multi-appareils, contr\u00f4les enrichis, meilleure gestion d'erreurs et bootstrap Python int\u00e9gr\u00e9",
-        "it": "Versione orientata alla produzione con sincronizzazione multi-dispositivo, controlli pi\u00f9 ricchi, migliore gestione errori e bootstrap Python incluso",
-        "es": "Versi\u00f3n orientada a producci\u00f3n con sincronizaci\u00f3n multidispositivo, controles m\u00e1s completos, mejor gesti\u00f3n de errores y bootstrap Python integrado",
-        "pl": "Wersja produkcyjna z synchronizacj\u0105 wielu urz\u0105dze\u0144, bogatszym sterowaniem, lepsz\u0105 obs\u0142ug\u0105 b\u0142\u0119d\u00f3w i do\u0142\u0105czonym bootstrapem Pythona",
-        "uk": "\u0412\u0435\u0440\u0441\u0456\u044f \u0434\u043b\u044f production \u0456\u0437 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0456\u0437\u0430\u0446\u0456\u0454\u044e \u043a\u0456\u043b\u044c\u043a\u043e\u0445 \u043f\u0440\u0438\u0441\u0442\u0440\u043e\u0457\u0432, \u0440\u043e\u0437\u0448\u0438\u0440\u0435\u043d\u0438\u043c \u043a\u0435\u0440\u0443\u0432\u0430\u043d\u043d\u044f\u043c, \u043a\u0440\u0430\u0449\u043e\u044e \u043e\u0431\u0440\u043e\u0431\u043a\u043e\u044e \u043f\u043e\u043c\u0438\u043b\u043e\u043a \u0456 \u0432\u0431\u0443\u0434\u043e\u0432\u0430\u043d\u0438\u043c Python bootstrap",
-        "zh-cn": "\u9762\u5411\u751f\u4ea7\u7684\u7248\u672c\uff0c\u652f\u6301\u591a\u8bbe\u5907\u540c\u6b65\u3001\u66f4\u4e30\u5bcc\u7684\u63a7\u5236\u3001\u66f4\u597d\u7684\u9519\u8bef\u5904\u7406\u4ee5\u53ca\u5185\u7f6e Python \u5f15\u5bfc"
+        "fr": "Version orientée production avec synchro multi-appareils, contrôles enrichis, meilleure gestion d'erreurs et bootstrap Python intégré",
+        "it": "Versione orientata alla produzione con sincronizzazione multi-dispositivo, controlli più ricchi, migliore gestione errori e bootstrap Python incluso",
+        "es": "Versión orientada a producción con sincronización multidispositivo, controles más completos, mejor gestión de errores y bootstrap Python integrado",
+        "pl": "Wersja produkcyjna z synchronizacją wielu urządzeń, bogatszym sterowaniem, lepszą obsługą błędów i dołączonym bootstrapem Pythona",
+        "uk": "Версія для production із синхронізацією кількох пристроїв, розширеним керуванням, кращою обробкою помилок і вбудованим Python bootstrap",
+        "zh-cn": "面向生产的版本，支持多设备同步、更丰富的控制、更好的错误处理以及内置 Python 引导"
       },
       "1.1.0": {
         "en": "Fixes wrong default API URL, improves auth diagnostics and enables the adapter by default",
-        "de": "Behebt die falsche Standard-API-URL, verbessert die Auth-Diagnose und aktiviert den Adapter standardm\u00e4\u00dfig",
-        "ru": "\u0418\u0441\u043f\u0440\u0430\u0432\u043b\u044f\u0435\u0442 \u043d\u0435\u0432\u0435\u0440\u043d\u044b\u0439 URL API \u043f\u043e \u0443\u043c\u043e\u043b\u0447\u0430\u043d\u0438\u044e, \u0443\u043b\u0443\u0447\u0448\u0430\u0435\u0442 \u0434\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0443 \u0430\u0443\u0442\u0435\u043d\u0442\u0438\u0444\u0438\u043a\u0430\u0446\u0438\u0438 \u0438 \u0432\u043a\u043b\u044e\u0447\u0430\u0435\u0442 \u0430\u0434\u0430\u043f\u0442\u0435\u0440 \u043f\u043e \u0443\u043c\u043e\u043b\u0447\u0430\u043d\u0438\u044e",
-        "pt": "Corrige a URL de API padr\u00e3o incorreta, melhora o diagn\u00f3stico de autentica\u00e7\u00e3o e ativa o adaptador por padr\u00e3o",
+        "de": "Behebt die falsche Standard-API-URL, verbessert die Auth-Diagnose und aktiviert den Adapter standardmäßig",
+        "ru": "Исправляет неверный URL API по умолчанию, улучшает диагностику аутентификации и включает адаптер по умолчанию",
+        "pt": "Corrige a URL de API padrão incorreta, melhora o diagnóstico de autenticação e ativa o adaptador por padrão",
         "nl": "Herstelt de verkeerde standaard-API-URL, verbetert auth-diagnose en schakelt de adapter standaard in",
-        "fr": "Corrige l'URL API par d\u00e9faut, am\u00e9liore le diagnostic d'authentification et active l'adaptateur par d\u00e9faut",
+        "fr": "Corrige l'URL API par défaut, améliore le diagnostic d'authentification et active l'adaptateur par défaut",
         "it": "Corregge l'URL API predefinito, migliora la diagnostica di autenticazione e abilita l'adattatore per impostazione predefinita",
-        "es": "Corrige la URL API predeterminada incorrecta, mejora el diagn\u00f3stico de autenticaci\u00f3n y habilita el adaptador por defecto",
-        "pl": "Naprawia b\u0142\u0119dny domy\u015blny URL API, poprawia diagnostyk\u0119 uwierzytelniania i domy\u015blnie w\u0142\u0105cza adapter",
-        "uk": "\u0412\u0438\u043f\u0440\u0430\u0432\u043b\u044f\u0454 \u043d\u0435\u043f\u0440\u0430\u0432\u0438\u043b\u044c\u043d\u0438\u0439 \u0441\u0442\u0430\u043d\u0434\u0430\u0440\u0442\u043d\u0438\u0439 URL API, \u043f\u043e\u043a\u0440\u0430\u0449\u0443\u0454 \u0434\u0456\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0443 \u0430\u0432\u0442\u0435\u043d\u0442\u0438\u0444\u0456\u043a\u0430\u0446\u0456\u0457 \u0442\u0430 \u0432\u043c\u0438\u043a\u0430\u0454 \u0430\u0434\u0430\u043f\u0442\u0435\u0440 \u0437\u0430 \u0437\u0430\u043c\u043e\u0432\u0447\u0443\u0432\u0430\u043d\u043d\u044f\u043c",
-        "zh-cn": "\u4fee\u590d\u9519\u8bef\u7684\u9ed8\u8ba4 API URL\uff0c\u6539\u8fdb\u8ba4\u8bc1\u8bca\u65ad\uff0c\u5e76\u9ed8\u8ba4\u542f\u7528\u9002\u914d\u5668"
+        "es": "Corrige la URL API predeterminada incorrecta, mejora el diagnóstico de autenticación y habilita el adaptador por defecto",
+        "pl": "Naprawia błędny domyślny URL API, poprawia diagnostykę uwierzytelniania i domyślnie włącza adapter",
+        "uk": "Виправляє неправильний стандартний URL API, покращує діагностику автентифікації та вмикає адаптер за замовчуванням",
+        "zh-cn": "修复错误的默认 API URL，改进认证诊断，并默认启用适配器"
       },
       "1.1.5": {
         "en": "Fixes admin icon packaging, boolean normalization, night-mode limits and Lydos water temperature mapping"
       }
     },
     "titleLang": {
-      "en": "Ariston RemoteThermo",
-      "de": "Ariston RemoteThermo",
-      "ru": "Ariston RemoteThermo",
-      "pt": "Ariston RemoteThermo",
-      "nl": "Ariston RemoteThermo",
-      "fr": "Ariston RemoteThermo",
-      "it": "Ariston RemoteThermo",
-      "es": "Ariston RemoteThermo",
-      "pl": "Ariston RemoteThermo",
-      "uk": "Ariston RemoteThermo",
-      "zh-cn": "Ariston RemoteThermo"
+      "en": "Ariston RemoteThermo"
     },
-    "desc": "ioBroker adapter for Ariston RemoteThermo devices with bundled Python bridge, improved Lydos Hybrid mapping and admin icon fixes",
+    "desc": "ioBroker adapter for Ariston RemoteThermo devices with bundled Python bridge and tuned Lydos Hybrid support",
     "authors": [
       "OpenAI"
     ],
