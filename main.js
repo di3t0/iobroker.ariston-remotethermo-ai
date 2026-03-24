@@ -46,6 +46,10 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
             return;
         }
 
+        await this.subscribeStatesAsync('commands.refresh');
+        await this.subscribeStatesAsync('commands.invoke');
+        await this.subscribeStatesAsync('devices.*.controls.*');
+
         await this.scheduleSync({ full: true, reason: 'startup' });
         this.startPolling();
     }

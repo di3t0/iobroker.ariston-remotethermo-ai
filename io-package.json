@@ -1,7 +1,7 @@
 {
   "common": {
     "name": "ariston-remotethermo-ai",
-    "version": "1.1.10",
+    "version": "1.1.11",
     "news": {
       "1.0.0": {
         "en": "Production-oriented release with multi-device sync, richer controls, better error handling and bundled Python bootstrap",
@@ -144,5 +144,5 @@
     }
   ],
   "instanceObjects": [],
-  "version": "1.1.10"
+  "version": "1.1.11"
 }
