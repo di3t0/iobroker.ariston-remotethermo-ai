@@ -12,6 +12,54 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Iterable
 
+import os
+import sysconfig
+import venv
+
+VENV_DIR = BASE_DIR / '.venv'
+
+def _venv_python_path(venv_dir: Path) -> Path:
+    if os.name == 'nt':
+        return venv_dir / 'Scripts' / 'python.exe'
+    return venv_dir / 'bin' / 'python'
+
+
+def _venv_site_packages(venv_dir: Path) -> list[str]:
+    candidates = []
+    if os.name == 'nt':
+        candidates.append(venv_dir / 'Lib' / 'site-packages')
+    else:
+        pyver = f'python{sys.version_info.major}.{sys.version_info.minor}'
+        candidates.append(venv_dir / 'lib' / pyver / 'site-packages')
+        for p in (venv_dir / 'lib').glob('python*/site-packages'):
+            candidates.append(p)
+    return [str(p) for p in candidates if p.exists()]
+
+
+def _extend_sys_path(paths: list[str]) -> None:
+    for p in paths:
+        if p and p not in sys.path:
+            sys.path.insert(0, p)
+
+
+def _create_or_repair_venv(venv_dir: Path) -> Path:
+    pybin = _venv_python_path(venv_dir)
+    if not pybin.exists():
+        builder = venv.EnvBuilder(with_pip=True, upgrade_deps=False)
+        builder.create(str(venv_dir))
+    return pybin
+
+
+def _venv_pip_install(venv_dir: Path, packages: list[str], offline: bool) -> tuple[int, str]:
+    pybin = _create_or_repair_venv(venv_dir)
+    cmd = [str(pybin), '-m', 'pip', 'install', '--disable-pip-version-check', '--no-input', '--upgrade']
+    if offline:
+        cmd += ['--find-links', str(WHEEL_DIR), '--no-index']
+    cmd += packages
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return result.returncode, (result.stderr or result.stdout or '').strip()
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 WHEEL_DIR = BASE_DIR / 'python-wheels'
 LOCAL_DEPS_DIR = BASE_DIR / '.pydeps'
@@ -56,8 +104,8 @@ def _pip_install(target: Path, packages: list[str], offline: bool) -> tuple[int,
 
 
 def bootstrap_local_deps(strategy: str) -> None:
-    if str(LOCAL_DEPS_DIR) not in sys.path:
-        sys.path.insert(0, str(LOCAL_DEPS_DIR))
+    _extend_sys_path([str(LOCAL_DEPS_DIR)])
+    _extend_sys_path(_venv_site_packages(VENV_DIR))
 
     try:
         import ariston  # noqa:F401
@@ -76,35 +124,65 @@ def bootstrap_local_deps(strategy: str) -> None:
     package_spec = [str(ariston_wheels[0])] if ariston_wheels else ['ariston==0.19.9']
     package_spec += ['requests>=2.31.0']
 
-    offline_err = ''
-    online_err = ''
-    if strategy in ('auto', 'offline'):
-        code, offline_err = _pip_install(LOCAL_DEPS_DIR, package_spec, offline=True)
-        if code == 0:
-            sys.path.insert(0, str(LOCAL_DEPS_DIR))
-        elif strategy == 'offline':
-            raise RuntimeError(f'Offline install from bundled wheels failed: {offline_err}')
+    errors: list[str] = []
 
-    try:
-        import ariston  # noqa:F401
-        return
-    except Exception:
-        pass
+    # Strategy 1: local --target install inside adapter folder
+    if strategy in ('auto', 'offline', 'online'):
+        if strategy in ('auto', 'offline'):
+            code, msg = _pip_install(LOCAL_DEPS_DIR, package_spec, offline=True)
+            if code == 0:
+                _extend_sys_path([str(LOCAL_DEPS_DIR)])
+                try:
+                    import ariston  # noqa:F401
+                    return
+                except Exception as exc:
+                    errors.append(f'local-target offline import failed: {exc}')
+            else:
+                errors.append(f'local-target offline install failed: {msg}')
+                if strategy == 'offline':
+                    raise RuntimeError(errors[-1])
 
-    if strategy in ('auto', 'online'):
-        code, online_err = _pip_install(LOCAL_DEPS_DIR, package_spec, offline=False)
-        if code != 0:
-            raise RuntimeError(
-                'Failed to install Python dependencies. '
-                f'Offline error: {offline_err} | Online error: {online_err}'
-            )
+        if strategy in ('auto', 'online'):
+            code, msg = _pip_install(LOCAL_DEPS_DIR, package_spec, offline=False)
+            if code == 0:
+                _extend_sys_path([str(LOCAL_DEPS_DIR)])
+                try:
+                    import ariston  # noqa:F401
+                    return
+                except Exception as exc:
+                    errors.append(f'local-target online import failed: {exc}')
+            else:
+                errors.append(f'local-target online install failed: {msg}')
 
-    if str(LOCAL_DEPS_DIR) not in sys.path:
-        sys.path.insert(0, str(LOCAL_DEPS_DIR))
-    try:
-        import ariston  # noqa:F401
-    except Exception as exc:
-        raise RuntimeError(f'Dependencies installed, but import still failed: {exc}')
+    # Strategy 2: self-managed venv inside adapter folder (works around Debian PEP 668)
+    if strategy in ('auto', 'offline', 'online'):
+        if strategy in ('auto', 'offline'):
+            code, msg = _venv_pip_install(VENV_DIR, package_spec, offline=True)
+            if code == 0:
+                _extend_sys_path(_venv_site_packages(VENV_DIR))
+                try:
+                    import ariston  # noqa:F401
+                    return
+                except Exception as exc:
+                    errors.append(f'venv offline import failed: {exc}')
+            else:
+                errors.append(f'venv offline install failed: {msg}')
+                if strategy == 'offline':
+                    raise RuntimeError(errors[-1])
+
+        if strategy in ('auto', 'online'):
+            code, msg = _venv_pip_install(VENV_DIR, package_spec, offline=False)
+            if code == 0:
+                _extend_sys_path(_venv_site_packages(VENV_DIR))
+                try:
+                    import ariston  # noqa:F401
+                    return
+                except Exception as exc:
+                    errors.append(f'venv online import failed: {exc}')
+            else:
+                errors.append(f'venv online install failed: {msg}')
+
+    raise RuntimeError('Dependencies installed, but import still failed: ' + ' | '.join(errors))
 
 
 

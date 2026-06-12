@@ -61,3 +61,8 @@ MIT
 ## Rate limiting
 
 When the Ariston cloud returns HTTP 429 / "Requests are blocked", the adapter enters a cooldown period and temporarily pauses writes and polling to avoid hammering the API.
+
+
+## Python bootstrap
+
+This adapter can now create and use a self-managed local virtual environment inside the adapter folder when the host blocks system-wide pip installs (for example Debian 12 / PEP 668).
