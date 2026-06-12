@@ -56,3 +56,8 @@ Install from a GitHub custom adapter URL or from your own published repository.
 ## License
 
 MIT
+
+
+## Rate limiting
+
+When the Ariston cloud returns HTTP 429 / "Requests are blocked", the adapter enters a cooldown period and temporarily pauses writes and polling to avoid hammering the API.

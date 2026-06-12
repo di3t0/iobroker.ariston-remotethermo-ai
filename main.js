@@ -12,6 +12,7 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
         this.pendingRefresh = false;
         this.pollCounter = 0;
         this.correctedApiUrl = null;
+        this.rateLimitedUntil = 0;
         this.on('ready', this.onReady.bind(this));
         this.on('stateChange', this.onStateChange.bind(this));
         this.on('unload', this.onUnload.bind(this));
@@ -34,6 +35,7 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
         await this.setStateAsync('info.connection', false, true);
         await this.setStateAsync('info.lastError', '', true);
         await this.setStateAsync('info.lastWriteDebug', '{}', true);
+        await this.setStateAsync('info.rateLimitedUntil', '', true);
 
         this.correctedApiUrl = this.normalizeApiUrl(this.config.apiUrl);
         if (String(this.config.apiUrl || '').trim() !== this.correctedApiUrl) {
@@ -73,6 +75,11 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
         await this.setObjectNotExistsAsync('info.lastError', {
             type: 'state',
             common: { name: 'Last adapter error', type: 'string', role: 'text', read: true, write: false, def: '' },
+            native: {},
+        });
+        await this.setObjectNotExistsAsync('info.rateLimitedUntil', {
+            type: 'state',
+            common: { name: 'Rate limit cooldown end', type: 'string', role: 'date', read: true, write: false, def: '' },
             native: {},
         });
         await this.setObjectNotExistsAsync('info.lastWriteDebug', {
@@ -125,6 +132,11 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
     }
 
     async performSync({ full = false, reason = 'manual' } = {}) {
+        await this.clearRateLimitCooldownIfExpired();
+        if (this.rateLimitedUntil && Date.now() < this.rateLimitedUntil) {
+            this.log.debug(`Skipping sync during cooldown until ${new Date(this.rateLimitedUntil).toISOString()} (${reason})`);
+            return;
+        }
         this.syncInProgress = true;
         try {
             this.pollCounter += 1;
@@ -163,10 +175,43 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
             await this.setStateAsync('info.lastSync', new Date().toISOString(), true);
             await this.setStateAsync('info.deviceCount', devices.length, true);
         } catch (error) {
+            if (this.isRateLimitError(error.message)) {
+                await this.enterRateLimitCooldown(error.message);
+                return;
+            }
             await this.failConnection(error.message);
             throw error;
         } finally {
             this.syncInProgress = false;
+        }
+    }
+
+
+    isRateLimitError(message) {
+        const msg = String(message || '').toLowerCase();
+        return msg.includes('requests are blocked') || msg.includes('http 429') || msg.includes('(429') || msg.includes('too many requests');
+    }
+
+    getCooldownMs() {
+        return Math.max(Number(this.config.rateLimitCooldownSec) || 900, 60) * 1000;
+    }
+
+    async enterRateLimitCooldown(message) {
+        const until = Date.now() + this.getCooldownMs();
+        if (until > this.rateLimitedUntil) {
+            this.rateLimitedUntil = until;
+        }
+        const untilIso = new Date(this.rateLimitedUntil).toISOString();
+        const fullMessage = `${message}. Cooling down until ${untilIso}`;
+        this.log.warn(fullMessage);
+        await this.setStateAsync('info.lastError', fullMessage, true);
+        await this.setStateAsync('info.rateLimitedUntil', untilIso, true);
+    }
+
+    async clearRateLimitCooldownIfExpired() {
+        if (this.rateLimitedUntil && Date.now() >= this.rateLimitedUntil) {
+            this.rateLimitedUntil = 0;
+            await this.setStateAsync('info.rateLimitedUntil', '', true);
         }
     }
 
@@ -390,6 +435,15 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
 
     async onStateChange(id, state) {
         if (!state || state.ack) return;
+        await this.clearRateLimitCooldownIfExpired();
+        if (this.rateLimitedUntil && Date.now() < this.rateLimitedUntil) {
+            const untilIso = new Date(this.rateLimitedUntil).toISOString();
+            const msg = `Requests are blocked. Adapter is cooling down until ${untilIso}`;
+            this.log.warn(msg);
+            await this.setStateAsync('info.lastError', msg, true);
+            await this.writeDebug('control-skipped-rate-limit', { stateId: id, until: untilIso, requestedValue: state.val });
+            return;
+        }
         try {
             if (id === `${this.namespace}.commands.refresh`) {
                 await this.setStateAsync('commands.refresh', false, true);
@@ -421,6 +475,11 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
             await this.markControlAccepted(relativeId, state.val);
             await this.schedulePostControlRefresh(obj.native.id);
         } catch (error) {
+            if (this.isRateLimitError(error.message)) {
+                await this.enterRateLimitCooldown(error.message);
+                await this.writeDebug('control-rate-limited', { stateId: id, message: String(error.message), requestedValue: state.val });
+                return;
+            }
             this.log.error(`State change handling failed: ${error.message}`);
             await this.setStateAsync('info.lastError', String(error.message), true);
             await this.writeDebug('control-error', { stateId: id, message: String(error.message), stack: error.stack || '' });

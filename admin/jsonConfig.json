@@ -94,6 +94,12 @@
       "newLine": true,
       "xs": 12,
       "sm": 4
+    },
+    "rateLimitCooldownSec": {
+      "type": "number",
+      "label": "Rate limit cooldown (seconds)",
+      "min": 60,
+      "help": "After HTTP 429 / Requests are blocked, pause writes and polling for this long"
     }
   }
 }
