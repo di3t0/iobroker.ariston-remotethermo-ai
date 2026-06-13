@@ -16,6 +16,9 @@ import os
 import sysconfig
 import venv
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+WHEEL_DIR = BASE_DIR / 'python-wheels'
+LOCAL_DEPS_DIR = BASE_DIR / '.pydeps'
 VENV_DIR = BASE_DIR / '.venv'
 
 def _venv_python_path(venv_dir: Path) -> Path:
@@ -60,9 +63,6 @@ def _venv_pip_install(venv_dir: Path, packages: list[str], offline: bool) -> tup
     return result.returncode, (result.stderr or result.stdout or '').strip()
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-WHEEL_DIR = BASE_DIR / 'python-wheels'
-LOCAL_DEPS_DIR = BASE_DIR / '.pydeps'
 
 
 def _ensure_pip_module() -> None:
