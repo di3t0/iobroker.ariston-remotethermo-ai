@@ -495,6 +495,8 @@ def build_controls(device, methods: list[str], values: dict[str, Any], units: di
 
     if 'async_set_power' in methods:
         current = values.get('power')
+        if current is None:
+            current = values.get('water_heater_power')
         if current is None and values.get('water_heater_mode'):
             current = str(values.get('water_heater_mode')).upper() not in ('OFF', 'PROGRAM_OFF')
         add_control(controls, 'power', type='boolean', role='switch.enable', method='async_set_power', current=current)
