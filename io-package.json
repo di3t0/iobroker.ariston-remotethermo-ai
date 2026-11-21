@@ -1,8 +1,12 @@
 {
   "common": {
     "name": "ariston-remotethermo-ai",
-    "version": "1.2.3",
+    "version": "1.3.0",
     "news": {
+      "1.3.0": {
+        "en": "Energy metering from consSequencesApi8 (hourly/daily/monthly kWh, today, yesterday, 7/30 days, 12 months, total, measured and estimated power).",
+        "de": "Energiezaehlung aus consSequencesApi8 (stuendliche/taegliche/monatliche kWh, heute, gestern, 7/30 Tage, 12 Monate, gesamt, gemessene und geschaetzte Leistung)."
+      },
       "1.0.0": {
         "en": "Production-oriented release with multi-device sync, richer controls, better error handling and bundled Python bootstrap",
         "de": "Produktionsorientierte Version mit Mehrger\u00e4te-Sync, erweiterten Steuerelementen, besserer Fehlerbehandlung und geb\u00fcndeltem Python-Bootstrap",
@@ -78,7 +82,10 @@
     "installStrategy": "auto",
     "controlRefreshDelay": 6,
     "fullStateRefreshEvery": 10,
-    "rateLimitCooldownSec": 900
+    "rateLimitCooldownSec": 900,
+    "energyEnabled": true,
+    "energyEveryN": 3,
+    "nominalPowerW": 1500
   },
   "objects": [
     {
@@ -135,5 +142,5 @@
     }
   ],
   "instanceObjects": [],
-  "version": "1.2.3"
+  "version": "1.3.0"
 }

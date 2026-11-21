@@ -158,9 +158,12 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
             for (const device of devices) {
                 await this.ensureDeviceObjects(device);
                 await this.setStateAsync(`devices.${device.gateway}.info.discovery_raw`, JSON.stringify(device.raw || {}, null, 2), true);
-                const state = await this.runBridge('state', String(device.gateway));
+                const doEnergy = this.shouldFetchEnergy();
+                const state = await this.runBridge('state', String(device.gateway), doEnergy ? ['--energy'] : []);
                 if (!state.ok) throw new Error(state.error || `State update failed for gateway ${device.gateway}`);
                 await this.syncDeviceState(String(device.gateway), state);
+                await this.syncEstimatedPower(String(device.gateway), state.values || {});
+                if (doEnergy) await this.syncEnergy(String(device.gateway), state.energy);
                 for (const method of state.methods || []) allMethods.add(method);
                 for (const control of state.controls || []) {
                     allControls.push({ gateway: String(device.gateway), ...control });
@@ -186,6 +189,102 @@ class AristonRemoteThermoAiAdapter extends utils.Adapter {
         }
     }
 
+
+    // ------------------------------------------------------------------
+    // Energy metering (consSequencesApi8 via python bridge --energy)
+    // ------------------------------------------------------------------
+
+    static get ENERGY_STATES() {
+        const kwh = (name) => ({ type: 'number', role: 'value.energy', unit: 'kWh', name });
+        const json = (name) => ({ type: 'string', role: 'json', name });
+        return {
+            current_hour_kwh: kwh('Consumption of the running hour'),
+            last_full_hour_kwh: kwh('Consumption of the last completed hour'),
+            last_24h_kwh: kwh('Consumption of the last 24 hours (rolling)'),
+            today_kwh: kwh('Consumption since local midnight'),
+            yesterday_kwh: kwh('Consumption of the previous day'),
+            last_7_days_kwh: kwh('Consumption of the last 7 days'),
+            last_30_days_kwh: kwh('Consumption of the last ~30 days'),
+            last_month_kwh: kwh('Consumption of the last completed month'),
+            last_12_months_kwh: kwh('Consumption of the last 12 months'),
+            total_kwh: kwh('Total consumption reported by the cloud'),
+            measured_power_w: { type: 'number', role: 'value.power', unit: 'W', name: 'Average power since previous energy poll (measured)' },
+            estimated_power_w: { type: 'number', role: 'value.power', unit: 'W', name: 'Estimated power (is_heating x nominal power)' },
+            hourly_series: json('Hourly buckets of the last 24 h (kWh, oldest first)'),
+            daily7_series: json('Daily buckets of the last 7 days (kWh, oldest first)'),
+            daily30_series: json('Daily buckets of the last ~30 days (kWh, oldest first)'),
+            monthly_series: json('Monthly buckets (kWh, oldest first)'),
+            raw_sequences: json('Raw consSequencesApi8 response'),
+            last_update: { type: 'string', role: 'date', name: 'Timestamp of the last successful energy poll' },
+            last_error: { type: 'string', role: 'text', name: 'Last energy error' },
+        };
+    }
+
+    shouldFetchEnergy() {
+        if (this.config.energyEnabled === false) return false;
+        const every = Math.max(Number(this.config.energyEveryN) || 3, 1);
+        return this.pollCounter === 1 || this.pollCounter % every === 0;
+    }
+
+    async putEnergy(gateway, key, value) {
+        const def = AristonRemoteThermoAiAdapter.ENERGY_STATES[key];
+        const id = `devices.${gateway}.energy.${key}`;
+        if (!this.energyObjectsCreated?.has(id)) {
+            await this.setObjectNotExistsAsync(`devices.${gateway}.energy`, {
+                type: 'channel', common: { name: 'Energy' }, native: {},
+            });
+            await this.setObjectNotExistsAsync(id, {
+                type: 'state',
+                common: { ...def, read: true, write: false },
+                native: {},
+            });
+            (this.energyObjectsCreated ||= new Set()).add(id);
+        }
+        if (value === undefined) return;
+        await this.setStateAsync(id, def.type === 'string' && typeof value !== 'string' ? JSON.stringify(value) : value, true);
+    }
+
+    async syncEstimatedPower(gateway, values) {
+        const nominal = Math.max(Number(this.config.nominalPowerW) || 1500, 0);
+        const heating = values.is_heating === true || values.is_heating === 1;
+        await this.putEnergy(gateway, 'estimated_power_w', heating ? nominal : 0);
+    }
+
+    async syncEnergy(gateway, energy) {
+        if (!energy || !energy.ok) {
+            const msg = energy?.error || 'no energy payload';
+            this.log.warn(`Energy poll for ${gateway} failed: ${msg}`);
+            await this.putEnergy(gateway, 'last_error', msg);
+            return;
+        }
+        for (const key of ['current_hour_kwh', 'last_full_hour_kwh', 'last_24h_kwh', 'today_kwh', 'yesterday_kwh',
+            'last_7_days_kwh', 'last_30_days_kwh', 'last_month_kwh', 'last_12_months_kwh', 'total_kwh']) {
+            if (energy[key] !== null && energy[key] !== undefined) await this.putEnergy(gateway, key, energy[key]);
+        }
+        const s = energy.series || {};
+        await this.putEnergy(gateway, 'hourly_series', s.hourly || []);
+        await this.putEnergy(gateway, 'daily7_series', s.daily7 || []);
+        await this.putEnergy(gateway, 'daily30_series', s.daily30 || []);
+        await this.putEnergy(gateway, 'monthly_series', s.monthly || []);
+        await this.putEnergy(gateway, 'raw_sequences', energy.raw_sequences || []);
+        await this.putEnergy(gateway, 'last_update', energy.fetched_at || new Date().toISOString());
+        await this.putEnergy(gateway, 'last_error', '');
+
+        // Measured average power from the kWh increase of "today" between two energy polls.
+        const now = Date.now();
+        const day = new Date().toDateString();
+        const today = Number(energy.today_kwh);
+        this.lastEnergySample ||= {};
+        const prev = this.lastEnergySample[gateway];
+        if (prev && prev.day === day && Number.isFinite(today) && today >= prev.kwh) {
+            const dtHours = (now - prev.ts) / 3600000;
+            if (dtHours > 0.01) {
+                await this.putEnergy(gateway, 'measured_power_w', Math.round(((today - prev.kwh) / dtHours) * 1000));
+            }
+        }
+        if (Number.isFinite(today)) this.lastEnergySample[gateway] = { ts: now, kwh: today, day };
+        this.log.debug(`Energy ${gateway}: today=${energy.today_kwh} 24h=${energy.last_24h_kwh} total=${energy.total_kwh}`);
+    }
 
     isRateLimitError(message) {
         const msg = String(message || '').toLowerCase();
