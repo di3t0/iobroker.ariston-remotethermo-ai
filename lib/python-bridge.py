@@ -789,11 +789,104 @@ async def cmd_discover(args):
     print(json.dumps({'ok': True, 'devices': await discover_all(args)}, ensure_ascii=False))
 
 
+# ---------------------------------------------------------------------------
+# Energy metering (consSequencesApi8)
+#
+# Raster semantics (verified 2026-09-02 against a Velis Evo2 / wheType 6):
+#   p=1  rolling 24 h, hourly buckets, oldest first, last = running hour
+#   p=2  last 7 days, daily buckets, oldest first, last = yesterday
+#   p=3  last ~30 days, daily buckets, oldest first (tail equals p=2)
+#   p=4  monthly buckets, oldest first, last = last completed month
+# Several k (consumption types) may be returned for one usages query -
+# they are summed element wise per interval p.
+# ---------------------------------------------------------------------------
+ENERGY_INTERVALS = {1: 'hourly', 2: 'daily7', 3: 'daily30', 4: 'monthly'}
+
+
+def _r3(value: float) -> float:
+    return round(float(value) + 0.0, 3)
+
+
+def compute_energy(sequences: list[dict[str, Any]], local_hour: int) -> dict[str, Any]:
+    """Pure function: turn raw consumption sequences into kWh figures."""
+    by_interval: dict[int, list[float]] = {}
+    for bucket in sequences or []:
+        try:
+            p = int(bucket.get('p'))
+        except (TypeError, ValueError):
+            continue
+        v = [float(x or 0) for x in (bucket.get('v') or [])]
+        if p not in by_interval:
+            by_interval[p] = v
+        else:
+            target = by_interval[p]
+            for i in range(max(len(target), len(v))):
+                if i >= len(target):
+                    target.append(0.0)
+                target[i] += v[i] if i < len(v) else 0.0
+
+    hourly = by_interval.get(1, [])
+    daily7 = by_interval.get(2, [])
+    daily30 = by_interval.get(3, [])
+    monthly = by_interval.get(4, [])
+
+    def last(arr, off=0):
+        idx = len(arr) - 1 - off
+        return _r3(arr[idx]) if idx >= 0 else None
+
+    hours_today = max(0, min(int(local_hour), 23)) + 1
+    return {
+        'current_hour_kwh': last(hourly, 0),
+        'last_full_hour_kwh': last(hourly, 1),
+        'last_24h_kwh': _r3(sum(hourly)) if hourly else None,
+        'today_kwh': _r3(sum(hourly[-hours_today:])) if hourly else None,
+        'yesterday_kwh': last(daily7, 0),
+        'last_7_days_kwh': _r3(sum(daily7)) if daily7 else None,
+        'last_30_days_kwh': _r3(sum(daily30)) if daily30 else None,
+        'last_month_kwh': last(monthly, 0),
+        'last_12_months_kwh': _r3(sum(monthly[-12:])) if monthly else None,
+        'total_kwh': _r3(sum(monthly)) if monthly else None,
+        'series': {
+            'hourly': [_r3(x) for x in hourly],
+            'daily7': [_r3(x) for x in daily7],
+            'daily30': [_r3(x) for x in daily30],
+            'monthly': [_r3(x) for x in monthly],
+        },
+    }
+
+
+async def collect_energy(device) -> dict[str, Any]:
+    """Fetch consumption sequences through the ariston library and evaluate them.
+
+    Never raises: an energy failure must not break the regular state sync.
+    """
+    if not hasattr(device, 'async_update_energy'):
+        return {'ok': False, 'error': 'device class has no async_update_energy'}
+    try:
+        await device.async_update_energy()
+    except Exception as exc:  # noqa: BLE001 - reported to the adapter instead
+        return {'ok': False, 'error': f'async_update_energy failed: {exc}'}
+    sequences = to_primitive(getattr(device, 'consumptions_sequences', None)) or []
+    if not sequences:
+        return {'ok': False, 'error': 'empty consumption sequences'}
+    result = compute_energy(sequences, datetime.now().hour)
+    result.update({
+        'ok': True,
+        'usages': str(getattr(device, 'consumption_type', '')),
+        'fetched_at': datetime.now().astimezone().isoformat(),
+        'raw_sequences': sequences,
+    })
+    return result
+
+
 async def cmd_state(args):
     _client, device, devices = await connect_device(args)
     if hasattr(device, 'async_update_state'):
         await device.async_update_state()
-    print(json.dumps(collect_state_payload(device, devices), ensure_ascii=False))
+    payload = collect_state_payload(device, devices)
+    if getattr(args, 'energy', False):
+        payload['energy'] = await collect_energy(device)
+    print(json.dumps(payload, ensure_ascii=False))
 
 
 def parse_control_value(control: dict[str, Any], raw_value: Any):
@@ -983,6 +1076,7 @@ async def main_async():
     parser.add_argument('--user-agent', required=True)
     parser.add_argument('--gateway-id', default='')
     parser.add_argument('--metric', action='store_true')
+    parser.add_argument('--energy', action='store_true', help='also fetch consSequencesApi8 consumption data')
     parser.add_argument('--method', default='')
     parser.add_argument('--invoke-args', default='[]')
     parser.add_argument('--control-id', default='')

@@ -100,6 +100,30 @@
       "label": "Rate limit cooldown (seconds)",
       "min": 60,
       "help": "After HTTP 429 / Requests are blocked, pause writes and polling for this long"
+    },
+    "energyEnabled": {
+      "type": "checkbox",
+      "label": "Read energy consumption (consSequencesApi8)",
+      "newLine": true,
+      "xs": 12,
+      "sm": 4
+    },
+    "energyEveryN": {
+      "type": "number",
+      "label": "Read energy every N polls",
+      "min": 1,
+      "max": 100,
+      "xs": 12,
+      "sm": 4,
+      "help": "Consumption report is slow and rate limited; 3 x 300 s = every 15 min"
+    },
+    "nominalPowerW": {
+      "type": "number",
+      "label": "Nominal heater power (W) for estimated power",
+      "min": 0,
+      "max": 10000,
+      "xs": 12,
+      "sm": 4
     }
   }
 }
